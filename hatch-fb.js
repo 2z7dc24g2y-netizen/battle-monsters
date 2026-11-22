@@ -22,7 +22,7 @@ var GAME = {
   ISLE_XP_Q: 5,         // 科學島：新答對一題
   ISLE_XP_LAB: 10,      // 科學島：完成一個實驗
   ISLE_XP_STAMP: 20,    // 科學島：蓋到一枚印章
-  ISLE_DAY_CAP: 100,    // 科學島練功每天最多換到的經驗（超過的留到隔天）
+  ISLE_DAY_CAP: 0,      // 科學島練功每天最多換到的經驗；0 = 不設上限
   ISLE_MAX_CHARS: 600000,
   PIN_TRIES: 8,         // 學生 PIN 連錯幾次就暫停 10 分鐘
   STAFF_TRIES: 5,       // 網管密碼、老師 PIN 連錯幾次就暫停 15 分鐘
@@ -703,7 +703,7 @@ function isleTally_(data) {
 function isleAward_(S, st, data) {
   var x = ext_(st), r = x.isle || (x.isle = { e: 0, d: '', x: 0 }), today = S.today();
   if (r.d !== today) { r.d = today; r.x = 0; }
-  var t = isleTally_(data), owe = Math.max(0, t.e - r.e), give = Math.min(owe, Math.max(0, GAME.ISLE_DAY_CAP - r.x));
+  var t = isleTally_(data), owe = Math.max(0, t.e - r.e), give = GAME.ISLE_DAY_CAP > 0 ? Math.min(owe, Math.max(0, GAME.ISLE_DAY_CAP - r.x)) : owe;
   var out = { xp: 0, hatch: 0, levelUps: 0, evolved: false, hatchedNow: false, newEgg: -1, left: owe - give, todayXp: r.x, cap: GAME.ISLE_DAY_CAP, tally: t };
   if (give <= 0) return out;
   r.e += give; r.x += give;

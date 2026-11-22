@@ -800,7 +800,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 <div class="toast" id="toast" hidden></div>
 
 <div id="rc-ov" hidden></div><div id="rc-bar" hidden>白板作戰進行中・輪到你的時候這裡會出現畫面</div>
-<script src="stand.js?v=88684af8"></script>
+<script src="stand.js?v=5897550c"></script>
 <script></script>
 <script></script>
 <script>
@@ -1504,11 +1504,11 @@ function renderLab(keepArena) {
   /* 學校網站版：到自然科學島練功 */
   var ic = $('#lab-isle');
   if (window.SciSync && ic) {
-    var I = me.isle || { today: 0, cap: 100, q: 5, lab: 10, stamp: 20 }, ip = Math.min(100, Math.round(I.today / I.cap * 100));
+    var I = me.isle || { today: 0, cap: 0, q: 5, lab: 10, stamp: 20 }, ip = I.cap > 0 ? Math.min(100, Math.round(I.today / I.cap * 100)) : 100;
     ic.hidden = false;
-    ic.innerHTML = '<div class="row" style="justify-content:space-between"><h2 style="margin:0">科學島練功</h2><span class="pill num">今天 ' + I.today + ' / ' + I.cap + ' XP</span></div>' +
+    ic.innerHTML = '<div class="row" style="justify-content:space-between"><h2 style="margin:0">科學島練功</h2><span class="pill num">今天 ' + I.today + (I.cap > 0 ? ' / ' + I.cap : '') + ' XP</span></div>' +
       '<div class="bar"><span style="width:' + ip + '%"></span></div>' +
-      '<p class="small muted" style="margin:0">到 15 座自然科學島散步、做實驗、和島民聊科學。新答對一題 +' + I.q + '、完成實驗 +' + I.lab + '、蓋到印章 +' + I.stamp + '，經驗都給' + (me.hatched ? '夥伴' : '蛋') + '。每天最多 ' + I.cap + '，超過的留到明天。</p>' +
+      '<p class="small muted" style="margin:0">到 15 座自然科學島散步、做實驗、和島民聊科學。新答對一題 +' + I.q + '、完成實驗 +' + I.lab + '、蓋到印章 +' + I.stamp + '，經驗都給' + (me.hatched ? '夥伴' : '蛋') + '。' + (I.cap > 0 ? '每天最多 ' + I.cap + '，超過的留到明天。' : '沒有每日上限，玩得越多拿得越多。') + '</p>' +
       '<div><a class="btn green big" id="l-isle" href="map.html">出發到科學島</a></div>';
   }
 }

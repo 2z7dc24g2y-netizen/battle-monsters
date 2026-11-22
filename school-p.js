@@ -26,9 +26,9 @@
   }
 
   function rate() {
-    var I = J('sciHatch.isle'), today = I.today || 0, cap = I.cap || 100;
+    var I = J('sciHatch.isle'), today = I.today || 0, cap = I.cap || 0;
     return '<div class="howto" style="line-height:1.7"><b>經驗怎麼來？</b><br>在各島新答對一題 +5、完成一個實驗 +10、蓋到一枚印章 +20，競技場和島上挑戰者對戰贏到的經驗也算。' +
-      '回到對戰吧時，這些經驗會加給你的<b>夥伴</b>（有蛋的話蛋也會一起孵化）。<br>每天最多 ' + cap + '，今天已經換了 <b class="num">' + today + '</b>' + (I.left > 0 ? '，還有 ' + I.left + ' 留到明天' : '') + '。</div>';
+      '回到對戰吧時，這些經驗會加給你的<b>夥伴</b>（有蛋的話蛋也會一起孵化）。<br>' + (cap > 0 ? '每天最多 ' + cap + '，' : '沒有每日上限，') + '今天已經換了 <b class="num">' + today + '</b>' + (I.left > 0 ? '，還有 ' + I.left + ' 留到明天' : '') + '。</div>';
   }
   var BTN = '<div style="margin-top:12px"><button class="btn gold" id="schoolHatch" type="button">回對戰吧！理化獸</button></div>';
   function bind() { var b = document.getElementById('schoolHatch'); if (b) b.onclick = goHatch; }
