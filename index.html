@@ -1504,7 +1504,7 @@ function renderLab(keepArena) {
   /* 學校網站版：到自然科學島練功 */
   var ic = $('#lab-isle');
   if (window.SciSync && ic) {
-    var I = me.isle || { today: 0, cap: 0, q: 5, lab: 10, stamp: 20 }, ip = I.cap > 0 ? Math.min(100, Math.round(I.today / I.cap * 100)) : 100;
+    var I = me.isle || { today: 0, cap: 500, q: 5, lab: 10, stamp: 20 }, ip = I.cap > 0 ? Math.min(100, Math.round(I.today / I.cap * 100)) : 100;
     ic.hidden = false;
     ic.innerHTML = '<div class="row" style="justify-content:space-between"><h2 style="margin:0">科學島練功</h2><span class="pill num">今天 ' + I.today + (I.cap > 0 ? ' / ' + I.cap : '') + ' XP</span></div>' +
       '<div class="bar"><span style="width:' + ip + '%"></span></div>' +

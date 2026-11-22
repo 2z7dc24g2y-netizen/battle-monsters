@@ -22,7 +22,7 @@ var GAME = {
   ISLE_XP_Q: 5,         // 科學島：新答對一題
   ISLE_XP_LAB: 10,      // 科學島：完成一個實驗
   ISLE_XP_STAMP: 20,    // 科學島：蓋到一枚印章
-  ISLE_DAY_CAP: 0,      // 科學島練功每天最多換到的經驗；0 = 不設上限
+  ISLE_DAY_CAP: 500,    // 科學島練功每天最多換到的經驗（超過的留到隔天）；0 = 不設上限
   ISLE_MAX_CHARS: 600000,
   PIN_TRIES: 8,         // 學生 PIN 連錯幾次就暫停 10 分鐘
   STAFF_TRIES: 5,       // 網管密碼、老師 PIN 連錯幾次就暫停 15 分鐘
