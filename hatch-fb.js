@@ -976,6 +976,13 @@ var FBX = (function () {
     getTeacher: function (id) { var t = C.teachers[ekey(id)] || C.teachers[id]; return t ? clone(t) : null; },
     saveTeacher: function (t) { C.teachers[t.id] = clone(t); put('teachers/' + t.id, t); },
     delTeacher: function (id) { delete C.teachers[id]; put('teachers/' + id, null); },
+    delClass: function (code) {
+      code = String(code); var pn = C.pins[code] || {};
+      Object.keys(pn).forEach(function (s) { if (pn[s] && pn[s].uid) put('users/' + pn[s].uid, null); });
+      ['students', 'gear', 'isle', 'live', 'pins', 'rooms'].forEach(function (n) { put(n + '/' + code, null); });
+      put('classes/' + code, null);
+      delete C.classes[code]; delete C.students[code]; delete C.pins[code]; delete C.gear[code]; delete C.live[code];
+    },
     listClasses: function () { return Object.keys(C.classes).map(function (k) { return clone(C.classes[k]); }); },
     getClass: function (code) { var c = C.classes[String(code)]; return c ? norm_cls(c) : null; },
     saveClass: function (cls) { var c = clone(cls); delete c._today; C.classes[c.code] = c; put('classes/' + c.code, c); },
@@ -1248,6 +1255,12 @@ API.adminDeleteTeacher = function (S, p) {
   if (n) fail_('這位老師還有 ' + n + ' 個班級。請先到班級清單把班級轉給別的老師，或改用「停用」。');
   S.delTeacher(t.id);
   return { ok: true };
+};
+
+API.deleteClass = function (S, p) {
+  var who = authStaff_(S, p), cls = myClass_(S, who, p.code);
+  S.delClass(cls.code);
+  return { classes: classesFor_(S, who) };
 };
 
 })();

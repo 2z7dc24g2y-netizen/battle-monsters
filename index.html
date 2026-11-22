@@ -668,6 +668,8 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 .rc-track .ball{position:absolute;top:50%;left:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:#fff;box-shadow:0 0 14px #fff}
 .rc-b:disabled{opacity:.4;filter:grayscale(.6)} .rc-b{flex-wrap:wrap}
 
+.clwdel{align-self:flex-end;margin-top:6px}
+
 </style>
 
 <header class="top">
@@ -1042,9 +1044,18 @@ function renderClasses(list) {
   el.innerHTML = list.map(function (c) {
     return '<div class="clwrap"><button data-code="' + esc(c.code) + '"><b>' + esc(c.name) + '</b><span class="small muted">代碼 <span class="num">' + esc(c.code) + '</span>・' + c.count + ' 人' + (adm ? '・' + (c.ownerName ? esc(c.ownerName) + ' 老師' : '未指派') : '') + '</span>' +
       '<span class="small">已孵化 <b class="num">' + c.hatched + '</b>／' + c.count + '・今日完成訓練 <b class="num">' + c.doneToday + '</b> 人</span></button>' +
-      (adm ? '<label class="small owner">導師<select data-own="' + esc(c.code) + '">' + opts(c) + '</select></label>' : '') + '</div>';
+      (adm ? '<label class="small owner">導師<select data-own="' + esc(c.code) + '">' + opts(c) + '</select></label>' : '') +
+      '<button class="btn ghost sm clwdel" data-delcls="' + esc(c.code) + '" data-nm="' + esc(c.name) + '">刪除班級</button></div>';
   }).join('');
   el.querySelectorAll('button[data-code]').forEach(function (b) { b.onclick = function () { openBoard(b.dataset.code); }; });
+  el.querySelectorAll('[data-delcls]').forEach(function (b) { b.onclick = function () {
+    var code = b.dataset.delcls;
+    var ans = window.prompt('要刪除班級「' + b.dataset.nm + '」嗎？\n班上所有學生的怪獸和紀錄都會一起刪除，無法復原。\n\n如果確定，請輸入班級代碼 ' + code + '：');
+    if (ans === null) return;
+    if (String(ans).trim() !== code) { toast('班級代碼不對，沒有刪除。'); return; }
+    busy(b, true, '');
+    call('deleteClass', { tok: S.tok, code: code }).then(function (d) { renderClasses(d.classes); toast('已刪除班級 ' + code); }).catch(function (e) { busy(b, false); alert('刪除失敗：' + (e && e.message || e)); });
+  }; });
   el.querySelectorAll('select[data-own]').forEach(function (sel) { sel.onchange = function () {
     sel.disabled = true;
     call('adminAssignClass', { tok: S.tok, code: sel.dataset.own, owner: sel.value }).then(function (d) { renderClasses(d.classes); toast('已指派導師'); }).catch(function (e) { toast(e.message); sel.disabled = false; });
