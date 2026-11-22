@@ -1124,9 +1124,71 @@ var FBX = (function () {
       }).then(function () { return data; });
     }).catch(function (e) { PEND = []; TASKS = []; throw new Error(nice(e)); });
   }
-  return { call: call, store: Store, C: function () { return C; }, ekey: ekey, ME: function () { return ME; }, dbS: dbS, dbT: dbT, STU: function () { return STU; }, ensureClass: ensureClass, watch: watch, nice: nice };
+
+  /* ---------- 白板作戰：老師白板 ⇄ 學生手機 ----------
+   * rooms/{班級}/open      老師開放中（學生才會心跳、才看得到加入）
+   * rooms/{班級}/presence  學生手機心跳（誰的手機在線，能被叫去操作）
+   * rooms/{班級}/joined    學生按了「加入白板作戰」
+   * rooms/{班級}/state     戰鬥狀態（哪些座號在場上）
+   * rooms/{班級}/turn      輪到誰、要做什麼；手機回 ack（收到）與 resp（結果） */
+  var Room = {
+    T: {
+      reset: function (code) { return dbS.ref('rooms/' + code).set({ open: true, at: Date.now() }); },
+      close: function (code) { return dbS.ref('rooms/' + code).set(null); },
+      state: function (code, o) { return dbS.ref('rooms/' + code + '/state').set(o); },
+      watch: function (code, cb) {
+        var seen = {}, pressed = [], lastKey = '', ref = dbS.ref('rooms/' + code);
+        function calc() {
+          var now = Date.now(), on = [];
+          Object.keys(seen).forEach(function (s) { if (now - seen[s].t < 25000) on.push(Number(s)); });
+          var k = JSON.stringify([on, pressed]); if (k !== lastKey) { lastKey = k; cb({ online: on, pressed: pressed }); }
+        }
+        ref.child('presence').on('value', function (snap) {
+          var v = snap.val() || {};
+          Object.keys(v).forEach(function (s) { var n = v[s] && v[s].n; if (!seen[s] || seen[s].n !== n) seen[s] = { n: n, t: Date.now() }; });
+          calc();
+        });
+        ref.child('joined').on('value', function (snap) { pressed = Object.keys(snap.val() || {}).map(Number).sort(function (a, b) { return a - b; }); calc(); });
+        var timer = setInterval(calc, 4000);
+        return function () { ref.child('presence').off(); ref.child('joined').off(); clearInterval(timer); };
+      },
+      /* 叫某位同學的手機做一件事，回傳 {noack}｜{timeout}｜{v:結果} */
+      turn: function (code, d) {
+        var base = dbS.ref('rooms/' + code), id = d.id;
+        return base.child('turn').set({ id: id, seat: d.seat, kind: d.kind, data: JSON.parse(JSON.stringify(d.data || {})), wait: d.wait, at: Date.now() }).then(function () {
+          return new Promise(function (res) {
+            var acked = false, done = false, t1, t2, ra = base.child('ack/' + id), rr = base.child('resp/' + id);
+            function fin(v) {
+              if (done) return; done = true; ra.off(); rr.off(); clearTimeout(t1); clearTimeout(t2);
+              base.child('turn').set(null); ra.set(null); rr.set(null); res(v);
+            }
+            ra.on('value', function (s) { if (s.val()) acked = true; });
+            rr.on('value', function (s) { var v = s.val(); if (v) fin({ v: v }); });
+            t1 = setTimeout(function () { if (!acked) fin({ noack: true }); }, 6000);
+            t2 = setTimeout(function () { fin({ timeout: true }); }, d.wait || 20000);
+          });
+        }, function () { return { noack: true }; });
+      }
+    },
+    S: {
+      watch: function (h) {
+        if (!STU) return function () {};
+        var base = dbT.ref('rooms/' + STU.code), me = String(STU.seat), offs = [];
+        function on(path, fn) { var r = base.child(path); r.on('value', function (s) { fn(s.val()); }, function () {}); offs.push(function () { r.off(); }); }
+        on('open', h.open); on('state', h.state); on('turn', h.turn); on('joined/' + me, function (v) { h.joined(!!v); });
+        return function () { offs.forEach(function (f) { f(); }); };
+      },
+      beat: function () { if (!STU) return; dbT.ref('rooms/' + STU.code + '/presence/' + STU.seat).set({ n: Date.now() % 1e9 }).catch(function () {}); },
+      join: function (on, name) { if (!STU) return Promise.resolve(); return dbT.ref('rooms/' + STU.code + '/joined/' + STU.seat).set(on ? { name: String(name || ''), at: Date.now() } : null); },
+      ack: function (id) { return dbT.ref('rooms/' + STU.code + '/ack/' + id).set(true); },
+      resp: function (id, v) { return dbT.ref('rooms/' + STU.code + '/resp/' + id).set(v); }
+    }
+  };
+
+  return { room: Room, call: call, store: Store, C: function () { return C; }, ekey: ekey, ME: function () { return ME; }, dbS: dbS, dbT: dbT, STU: function () { return STU; }, ensureClass: ensureClass, watch: watch, nice: nice };
 })();
 window.fbCall = FBX.call;
+window.fbRoom = FBX.room;
 window.HATCH_FB = true;
 
 /* ===== Firebase 版要改寫的規則（接在 logic.js 與 fb.js 之後） ===== */
