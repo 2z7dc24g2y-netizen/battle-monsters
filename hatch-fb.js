@@ -975,6 +975,7 @@ var FBX = (function () {
     listTeachers: function () { return Object.keys(C.teachers).map(function (k) { return clone(C.teachers[k]); }); },
     getTeacher: function (id) { var t = C.teachers[ekey(id)] || C.teachers[id]; return t ? clone(t) : null; },
     saveTeacher: function (t) { C.teachers[t.id] = clone(t); put('teachers/' + t.id, t); },
+    delTeacher: function (id) { delete C.teachers[id]; put('teachers/' + id, null); },
     listClasses: function () { return Object.keys(C.classes).map(function (k) { return clone(C.classes[k]); }); },
     getClass: function (code) { var c = C.classes[String(code)]; return c ? norm_cls(c) : null; },
     saveClass: function (cls) { var c = clone(cls); delete c._today; C.classes[c.code] = c; put('classes/' + c.code, c); },
@@ -1239,5 +1240,14 @@ API.adminApprove = function (S, p) {
 API.adminResetTeacher = function () { fail_('老師用 Google 登入，不需要重設密碼。'); };
 API.changePin = function () { fail_('老師用 Google 登入，不需要 PIN。'); };
 API.lookup = function () { fail_('請先登入再查詢怪獸。'); };
+
+API.adminDeleteTeacher = function (S, p) {
+  authStaff_(S, p, true);
+  var t = S.getTeacher(p.id); if (!t) fail_('找不到這位老師。');
+  var n = S.listClasses().filter(function (c) { return c.owner === t.id; }).length;
+  if (n) fail_('這位老師還有 ' + n + ' 個班級。請先到班級清單把班級轉給別的老師，或改用「停用」。');
+  S.delTeacher(t.id);
+  return { ok: true };
+};
 
 })();

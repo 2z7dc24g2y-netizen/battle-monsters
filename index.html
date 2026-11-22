@@ -1002,13 +1002,18 @@ function renderTeachers() {
   var list = S.teachers || [];
   $('#tlist').innerHTML = list.length ? list.map(function (t) {
     return '<div class="trow' + (t.active ? '' : ' off') + '"><span><b>' + esc(t.name) + '</b><br><span class="small muted">' + esc(t.email || t.id) + '</span></span><span class="small muted">' + t.classes + ' 班' + (t.active ? '' : '・已停用') + '</span>' +
-      '<button class="btn ghost sm" data-act="' + esc(t.id) + '" data-on="' + (t.active ? 0 : 1) + '">' + (t.active ? '停用' : '啟用') + '</button></div>';
+      '<button class="btn ghost sm" data-act="' + esc(t.id) + '" data-on="' + (t.active ? 0 : 1) + '">' + (t.active ? '停用' : '啟用') + '</button>' +
+      '<button class="btn ghost sm" data-del="' + esc(t.id) + '" data-nm="' + esc(t.name) + '">刪除</button></div>';
   }).join('') : '<p class="muted small" style="margin:0">還沒有老師帳號。</p>';
   $('#tlist').querySelectorAll('[data-reset]').forEach(function (b) { b.onclick = function () {
     /* 按第一次先變成「再按一次確定」，避免誤觸（瀏覽器的確認小視窗在某些環境會被擋掉） */
     if (!b.dataset.arm) { b.dataset.arm = '1'; b.textContent = '再按一次確定'; b.classList.add('orange'); clearTimeout(b._t); b._t = setTimeout(function () { delete b.dataset.arm; b.textContent = '重設 PIN'; b.classList.remove('orange'); }, 4000); return; }
     clearTimeout(b._t); delete b.dataset.arm;
     busy(b, true, ''); call('adminResetTeacher', { tok: S.tok, id: b.dataset.reset }).then(function (r) { showPin(r, '新的 PIN'); }).catch(function (e) { toast(e.message); }).then(function () { busy(b, false); b.textContent = '重設 PIN'; b.classList.remove('orange'); });
+  }; });
+  $('#tlist').querySelectorAll('[data-del]').forEach(function (b) { b.onclick = function () {
+    if (!confirm('確定要刪除老師「' + b.dataset.nm + '」嗎？\n刪除後他就不能再登入，要再用只能重新申請或由你重新開通。\n（如果他還有班級，需要先把班級轉給別的老師。）')) return;
+    busy(b, true, ''); call('adminDeleteTeacher', { tok: S.tok, id: b.dataset.del }).then(function () { toast('已刪除'); return refreshStaff(); }).catch(function (e) { toast(e.message); busy(b, false); });
   }; });
   $('#tlist').querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () {
     busy(b, true, ''); call('adminSetTeacher', { tok: S.tok, id: b.dataset.act, active: b.dataset.on === '1' }).then(refreshStaff).catch(function (e) { toast(e.message); busy(b, false); });
