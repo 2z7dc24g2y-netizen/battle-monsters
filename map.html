@@ -1,0 +1,441 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><script src="split.js?v=1"></script><script src="config.js"></script><script src="hatch-demo.js"></script><script>window.SCI_PAGE="map"</script><script src="sync.js"></script>
+</head><body>
+<meta charset="utf-8"><script src="split.js?v=3"></script>
+<title>自然科學島</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700;900&family=JetBrains+Mono:wght@600;700&display=swap" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700;900&family=JetBrains+Mono:wght@600;700&display=swap"></noscript>
+<script src="cap.js?v=s3" defer></script>
+<style>
+/* 版面：天空（依真實時間變化的晨昏）→ 海平線 → 一張會呼吸的航海圖，15 座島沿航線散布，船沿航線慢慢開；下方是島嶼目錄 */
+:root{
+  /* 天空與海的顏色由腳本依時段改寫，這裡是白天的值 */
+  --sky-1:#8ec5e6; --sky-2:#cfe9f3; --sky-3:#fbe9cf;
+  --sea-1:#6fb7c4; --sea-2:#4f9db0; --sea-3:#3b8299;
+  --sand:#f1e2c2; --foam:#fffaf0;
+  --paper:#fffaf3; --paper-2:#f5eee2; --ink:#2f2a26; --ink-soft:#6f6359; --line:#e8dccb;
+  --accent:#e2774a; --leaf:#5f9b5b;
+  --hero-ink:#173a4a; --sail-bg:#173a4a; --sail-fg:#fffaf3;
+  --f-display:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --shadow:0 10px 30px rgba(20,50,60,.18),0 1px 0 rgba(20,50,60,.06);
+  color-scheme:light;
+}
+html,body{min-height:100%}
+body{background:var(--sea-3);color:var(--ink);font-family:var(--f-body);-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+
+/* ---- 天空 ---- */
+.sky{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--sky-1),var(--sky-2) 62%,var(--sky-3));transition:background 1.2s}
+.sky canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero{position:relative;z-index:1;max-width:760px;margin:0 auto;padding-block:30px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));color:var(--hero-ink);display:flex;flex-direction:column;gap:14px}
+.greet{font-size:14px;font-weight:700;letter-spacing:.04em;opacity:.85;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tod{border:0;background:rgba(255,255,255,.55);backdrop-filter:blur(6px);border-radius:99px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--hero-ink)}
+.tod:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(44px,13vw,76px);line-height:1;letter-spacing:.04em;text-shadow:0 2px 0 rgba(255,255,255,.35)}
+.sub{margin:0;font-size:15px;line-height:1.7;max-width:34em;opacity:.9;text-wrap:balance}
+.panel{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:4px}
+.chip{display:flex;align-items:baseline;gap:6px;padding:8px 14px;border-radius:99px;background:rgba(255,255,255,.62);backdrop-filter:blur(8px);font-size:13px;font-weight:700}
+.chip b{font-family:var(--f-mono);font-size:16px;color:var(--accent);font-variant-numeric:tabular-nums}
+.sail{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:16px;background:var(--sail-bg);color:var(--sail-fg);font-weight:800;font-size:15px;text-decoration:none;box-shadow:var(--shadow)}
+.sail:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* ---- 海 ---- */
+.ocean{position:relative;background:linear-gradient(180deg,var(--sea-1),var(--sea-2) 45%,var(--sea-3));transition:background 1.2s;margin-top:-1px}
+.horizon{position:absolute;left:0;right:0;top:-28px;height:30px;background:linear-gradient(180deg,transparent,var(--sea-1));pointer-events:none}
+.mapwrap{max-width:640px;margin:0 auto;padding-bottom:44px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+.map{position:relative;width:100%;aspect-ratio:10/34;max-width:100%}
+.map canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hxmap{position:relative;display:block;width:100%;height:auto}
+.isle{cursor:pointer;outline:none}.isle .bobg{animation:hbob 6s ease-in-out infinite;animation-delay:var(--dl,0s)}@keyframes hbob{50%{transform:translateY(-2.5px)}}
+.isle .top{transition:transform .25s}.isle:hover .top,.isle:focus-visible .top{transform:translateY(-3px)}
+.isle:focus-visible .pill rect{stroke:var(--accent);stroke-width:2.5}.isle.on .pill rect{fill:var(--ink)}.isle.on .pill text{fill:var(--paper)}
+[data-tod="night"] .isle .thumb{filter:brightness(.7) saturate(.85)}[data-tod="dusk"] .isle .thumb{filter:sepia(.18) saturate(1.1) brightness(.95)}
+
+/* ---- 目錄 ---- */
+.dir{background:var(--paper);border-radius:28px 28px 0 0;margin-top:8px}
+.dir-in{max-width:900px;margin:0 auto;padding-block:26px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+.dir h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:26px;letter-spacing:.06em}
+.dir p.lead{margin:0;color:var(--ink-soft);font-size:14px;line-height:1.7}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.filters button{border:1.5px solid var(--line);background:var(--paper);border-radius:99px;padding:7px 14px;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--ink-soft)}
+.filters button.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.filters button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.card{display:flex;flex-direction:column;border:0;padding:0;background:var(--paper-2);border-radius:18px;overflow:hidden;cursor:pointer;text-align:left;min-width:0}
+.card .ph{position:relative;aspect-ratio:4/3;overflow:hidden;background:#9cc27e}
+.card .ph img{width:100%;height:100%;object-fit:cover;transform:scale(1.3);display:block}
+.card .ph i{position:absolute;left:8px;top:8px;font-style:normal;font-family:var(--f-mono);font-weight:700;font-size:12px;color:#fff;border-radius:8px;padding:3px 7px}
+.card .tx{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card .nm{font-weight:900;font-size:15px}
+.card .th{font-size:12px;color:var(--ink-soft);line-height:1.45;min-height:2.9em}
+.card .pb{height:6px;border-radius:99px;background:var(--line);overflow:hidden}.card .pb b{display:block;height:100%;border-radius:99px}
+.card .pn{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.foot{text-align:center;font-size:12px;color:var(--ink-soft);line-height:1.7;margin-top:10px}
+
+/* ---- 島卡 ---- */
+.sheet{position:fixed;z-index:6;left:0;right:0;bottom:0;background:var(--paper);border-radius:26px 26px 0 0;box-shadow:0 -12px 40px rgba(20,40,50,.25);
+  padding-block:10px calc(env(safe-area-inset-bottom,0px) + 22px);padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px));
+  transform:translateY(105%);transition:transform .4s cubic-bezier(.2,.8,.2,1);max-width:640px;margin:0 auto;max-height:86vh;overflow:auto}
+body.open .sheet{transform:none}
+.grab{width:48px;height:5px;border-radius:9px;background:#ddd2c3;margin:0 auto 12px}
+.x{position:absolute;top:14px;right:16px;width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.85);font-size:20px;color:var(--ink);cursor:pointer;z-index:1}
+.banner{position:relative;height:120px;border-radius:18px;overflow:hidden;margin-bottom:14px}
+.banner img{width:100%;height:100%;object-fit:cover;transform:scale(1.25)}
+.banner .badge{position:absolute;left:12px;bottom:12px;width:50px;height:56px;display:grid;place-items:center;font-weight:900;font-size:24px;color:#fff;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.16em;font-weight:700}
+.sheet h3{margin:3px 0 0;font-size:21px;font-weight:900;line-height:1.35;text-wrap:balance}
+.isle-n{font-family:var(--f-display);font-size:17px;color:var(--ink-soft);margin-top:2px}
+.st{margin:12px 0 0;font-size:15px;line-height:1.75;color:#5c4f46}
+.bar{margin-top:14px;height:10px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .5s}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tg{padding:6px 14px;border-radius:99px;border:1.5px solid var(--line);font-size:13px;font-weight:500;color:#6b5d53;text-decoration:none}
+.go{margin-top:18px;display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border-radius:16px;background:var(--ink);color:var(--paper);font-size:16px;font-weight:800;text-decoration:none}
+.go:focus-visible,.x:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.scrim{position:fixed;inset:0;z-index:5;background:rgba(10,30,40,.25);opacity:0;pointer-events:none;transition:opacity .3s}
+body.open .scrim{opacity:1;pointer-events:auto}
+
+@media (min-width:760px){
+  .map{aspect-ratio:16/10.5}
+  .hero{padding-block:44px 80px}
+}
+@media (prefers-reduced-motion:reduce){.isle .bobg{animation:none}.sheet,.bar i,.sky,.ocean{transition:none}}
+.sails{display:flex;gap:10px;flex-wrap:wrap}
+.sail.ghost{background:rgba(255,250,243,.86);color:#173a4a;border:0;font:inherit;font-weight:800;font-size:15px;cursor:pointer;backdrop-filter:blur(8px)}
+.prep{display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-bottom:18px}
+@media (max-width:640px){.prep{grid-template-columns:1fr}}
+.pc{border-radius:22px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pc-exam{background:#173a4a;color:#fffaf3;background-image:radial-gradient(circle at 92% 12%,rgba(255,214,140,.28),transparent 42%)}
+.pc-diag{background:var(--paper-2)}
+.pc h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:24px;letter-spacing:.05em}
+.pc p{margin:0;font-size:14px;line-height:1.7}
+.pc-exam p{color:rgba(255,250,243,.82)}.pc-exam p b{color:#ffd68c}
+.pey{font-size:12px;font-weight:800;letter-spacing:.16em;color:var(--accent)}
+.pc-exam .pey{color:#ffd68c}
+.prow{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:6px}
+.pbtn{border:0;border-radius:14px;padding:11px 16px;font:inherit;font-weight:800;font-size:14.5px;cursor:pointer;background:#ffd68c;color:#173a4a}
+.pbtn.alt{background:rgba(255,250,243,.14);color:#fffaf3;box-shadow:inset 0 0 0 1.5px rgba(255,250,243,.35)}
+.pc-diag .pbtn.alt{background:var(--paper);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.pbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.pdiag{display:flex;flex-direction:column;gap:8px;color:var(--ink-soft)}
+.pdr{display:grid;grid-template-columns:6px 1fr auto;gap:10px;align-items:center;background:var(--paper);border-radius:14px;padding:9px 10px;color:var(--ink);text-decoration:none}
+.pdr>i{align-self:stretch;border-radius:4px}.pdr b{font-size:14.5px}.pdr span{display:block;font-size:12.5px;color:var(--ink-soft)}
+.pdr em{font-style:normal;font-family:var(--f-mono);font-weight:700;font-size:13px;color:var(--ink-soft)}
+.pc-day{grid-column:1/-1;background:var(--paper-2)}
+.pdh{display:flex;gap:14px;align-items:center}
+.pfl{position:relative;width:64px;height:64px;flex:none;border-radius:20px;background:var(--paper);color:#cbbfb0;display:grid;place-items:center}
+.pfl.on{color:#e8463b;background:#fdeee6}
+.pfl b{position:absolute;right:-4px;bottom:-4px;min-width:26px;text-align:center;font:800 15px var(--f-mono);color:var(--ink);background:var(--paper);border-radius:9px;padding:1px 6px;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+.ptk{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:640px){.ptk{grid-template-columns:1fr}}
+.ptk div{display:flex;flex-direction:column;gap:6px;background:var(--paper);border-radius:14px;padding:10px 12px;font-size:14px;font-weight:700;color:var(--ink)}
+.ptk div.ok span{color:var(--ink-soft);text-decoration:line-through}
+.ptk i{display:block;height:6px;border-radius:6px;background:var(--line);overflow:hidden}.ptk i b{display:block;height:100%;background:#3f7f57;border-radius:6px}
+.ptk em{font-style:normal;font:600 12px var(--f-mono);color:var(--ink-soft)}
+.pc-day .pbtn.alt{background:var(--paper);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.pglow{pointer-events:none;animation:pglow 3.2s ease-in-out infinite}.pglow .pring{animation:pring 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes pglow{0%,100%{opacity:.55}50%{opacity:1}}@keyframes pring{0%,100%{opacity:.25;transform:scale(.96)}50%{opacity:1;transform:scale(1.06)}}.ptw{pointer-events:none;opacity:0;animation:ptw 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes ptw{0%,100%{opacity:0}45%{opacity:1}}@media (prefers-reduced-motion:reduce){.ptw{animation:none;opacity:.7}.pglow,.pglow .pring{animation:none;opacity:.5}}
+.pc-save{grid-column:1/-1;background:var(--paper-2)}.pc-save .pey{color:var(--accent)}.pc-save p{margin:0;font-size:14px;line-height:1.7;color:var(--ink-soft)}.pc-save .pbtn{background:#173a4a;color:#fffaf3}.pc-save .pbtn.alt{background:var(--paper);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}.pc-save.due{box-shadow:inset 0 0 0 2px #e9a23b}.pc-save.due .pbtn{background:#e9a23b;color:#2b2622}
+.svm{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(23,30,36,.5)}.svm .bx{width:min(440px,100%);max-height:88vh;overflow:auto;background:var(--paper);color:var(--ink);border-radius:22px;padding:20px 18px 16px;box-shadow:0 18px 50px rgba(0,0,0,.3)}.svm h3{margin:0 0 6px;font-size:19px;font-weight:900}.svm p{margin:6px 0;font-size:14px;line-height:1.7}.svm table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.5px}.svm th,.svm td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}.svm th{font-size:12px;color:var(--ink-soft);font-weight:700}.svm td b{font-family:var(--f-mono)}.svm .prow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.svm .pbtn{background:#173a4a;color:#fffaf3}.svm .pbtn.alt{background:var(--paper-2);color:var(--ink);box-shadow:none}.svm .pbtn.warn{background:#d4483a;color:#fff}.svm .err{color:#b23a2c;font-weight:700}
+</style>
+
+<header class="sky" id="sky">
+  <canvas id="skyCv" aria-hidden="true"></canvas>
+  <div class="hero">
+    <div class="greet"><span id="greet">午安，海面很平靜</span><button class="tod" id="tod" aria-label="切換時段">跟著真實時間</button></div>
+    <h1>自然科學島</h1>
+    <p class="sub">十六座島，涵蓋 108 課綱國中自然的十五個學習主題。登上一座島，散步、做實驗、和島民聊科學。</p>
+    <div class="panel">
+      <span class="chip">已登島 <b id="sVis">0</b>/15</span>
+      <span class="chip">集章 <b id="sSt">0</b>/<span id="sStT">0</span></span>
+      <span class="chip">例題答對 <b id="sQ">0</b>/<span id="sQT">0</span></span>
+    </div>
+    <div class="sails"><a class="sail" id="sail" href="A.html">從物質組成島出發</a><button class="sail ghost" id="capGo" type="button">模擬會考</button></div>
+  </div>
+</header>
+
+<section class="ocean" aria-label="群島航海圖">
+  <div class="horizon"></div>
+  <div class="mapwrap"><div class="map" id="map"><canvas id="seaCv" aria-hidden="true"></canvas></div></div>
+</section>
+
+<section class="dir">
+  <div class="dir-in">
+    <div class="prep" id="prep">
+      <div class="pc pc-day">
+        <div class="pdh"><div class="pfl" id="dFl"><svg viewBox="0 0 20 20" width="34" height="34" aria-hidden="true"><path d="M10 1.5c1 3.5 5 5.2 5 10a5 5 0 0 1-10 0c0-2.6 1.4-3.8 2.4-5 .2 1.6.9 2.6 1.8 3 .2-3.2 0-5.6.8-8z" fill="currentColor"/></svg><b id="dSt">0</b></div>
+          <div><div class="pey">每日任務</div><h2 id="dT">完成三個任務，點燃火焰</h2></div></div>
+        <div class="ptk" id="dTk"></div>
+        <div class="prow"><button class="pbtn alt" id="dNb" type="button">錯題本</button><button class="pbtn alt" id="dAc" type="button">成就牆</button><button class="pbtn alt" id="dRp" type="button">學習報告卡</button></div>
+      </div>
+      <div class="pc pc-exam">
+        <div class="pey">會考備戰</div>
+        <h2>模擬會考</h2>
+        <p>歷屆會考自然科 <b id="capN">520</b> 題，依主題比例抽題、計時作答，交卷馬上看詳解。也可以到每座島中央的<b>會考塔</b>按單元練習。</p>
+        <div class="prow"><button class="pbtn" id="capFull" type="button">隨機 10 題</button><button class="pbtn alt" id="capQuick" type="button">隨機 25 題</button></div>
+      </div>
+      <div class="pc pc-diag">
+        <div class="pey">弱點診斷</div>
+        <h2 id="capDT">該先去哪座島？</h2>
+        <div id="capDiag" class="pdiag"><p>做完一回模擬會考或會考塔練習，這裡會依答對率推薦你要複習的島嶼和單元。</p></div>
+        <div class="prow"><button class="pbtn alt" id="capDiagB" type="button">完整診斷</button></div>
+      </div>
+      <div class="pc pc-save" id="saveCard">
+        <div class="pey">我的存檔</div>
+        <h2 id="svT">把進度存成檔案</h2>
+        <p id="svP">進度平常存在這台裝置的瀏覽器裡。下載一個存檔檔案自己保管，換手機、換電腦或清掉瀏覽器資料後，讀取存檔就能接著玩。</p>
+        <div class="prow"><button class="pbtn" id="svDl" type="button">下載存檔</button><button class="pbtn alt" id="svUp" type="button">讀取存檔</button><input type="file" id="svIn" accept=".json,application/json,text/plain" hidden></div>
+      </div>
+    </div>
+    <h2>島嶼目錄</h2>
+    <p class="lead">點一座島看看它在教什麼。進度只存在這台裝置的瀏覽器裡，登入後會自動同步。</p>
+    <div class="filters" id="flt" role="group" aria-label="篩選">
+      <button class="on" data-c="all">全部</button><button data-c="pc">理化海域</button><button data-c="bio">生物灣</button><button data-c="geo">地科群島</button><button data-c="x">跨科航道</button><button data-c="game">競技島</button>
+    </div>
+    <div class="cards" id="cards"></div>
+    <p class="foot">主題名稱依 108 課綱國中自然學習內容整理。作者：辛巴王</p>
+  </div>
+</section>
+
+<div class="scrim" id="scrim"></div>
+<aside class="sheet" id="sheet" aria-live="polite">
+  <div class="grab"></div>
+  <button class="x" id="x" aria-label="關閉">✕</button>
+  <div class="banner" id="bBan"><img id="bImg" alt=""><div class="badge" id="bB">A</div></div>
+  <div class="eyebrow" id="bE"></div>
+  <h3 id="bT"></h3>
+  <div class="isle-n" id="bN"></div>
+  <p class="st" id="bS"></p>
+  <div id="bProg"></div>
+  <a class="go" id="bGo" href="A.html">登島 →</a>
+</aside>
+
+<script>
+const THEMES=[
+ {k:"A",c:"pc",name:"物質的組成與特性",isle:"物質組成島",col:"#de774c",ready:true,file:"A.html",thumb:"A-top.jpg",units:9,q:45,desc:"原子模型、原子量、元素與化合物、週期表、化學式、粒子與三態、物理與化學性質、混合物分離。"},
+ {k:"C",c:"pc",name:"物質的結構與功能",isle:"結構功能島",col:"#c96a7a",ready:true,file:"C.html",thumb:"C-top.jpg",units:7,q:35,desc:"過濾、結晶、色層分析與化合物的鑑定，以及原子與分子、同素異形體、同分異構物：物質的結構如何決定它的性質。"},
+ {k:"J",c:"pc",name:"物質反應、平衡及製造",isle:"化學反應島",col:"#d9574a",ready:true,file:"J.html",thumb:"J-top.jpg",units:16,q:80,desc:"化學反應的現象、質量守恆、反應式與莫耳，燃燒、氧化還原，電解質、酸鹼與 pH、中和與沉澱，反應速率與化學平衡，以及有機化合物、酯化皂化與塑膠。"},
+ {k:"B",c:"pc",name:"能量的形式、轉換及流動",isle:"能量島",col:"#e9a23b",ready:true,file:"B.html",thumb:"B-top.jpg",units:13,q:65,desc:"能量的形式與轉換、功與功率、動能位能與力學能守恆、化學能與電池、溫度與熱、比熱、熱的傳播，以及光合作用、呼吸作用與生態系的能量流動。"},
+ {k:"E",c:"pc",name:"物質系統",isle:"物質系統島",col:"#4f7fa6",ready:true,file:"E.html",thumb:"E-top.jpg",units:18,q:90,desc:"測量與尺度、力的作用、摩擦力、力矩與簡單機械、壓力與浮力、運動的描述、圓周運動、牛頓定律、氣壓，以及宇宙、星系與萬有引力。"},
+ {k:"K",tag:"K1",c:"pc",name:"自然界的現象與交互作用：波動、聲音與光",isle:"聲光島",col:"#5fa8c8",ready:true,file:"K.html",thumb:"K-top.jpg",units:9,q:45,desc:"波的特徵、聲音的傳播與反射、聲音三要素，以及光的直進、反射、折射、透鏡成像、眼睛與光學儀器、色散與顏色。"},
+ {k:"Q",tag:"K2",c:"pc",name:"自然界的現象與交互作用：電與磁",isle:"電磁島",col:"#7a6fb8",ready:true,file:"Q.html",thumb:"Q-top.jpg",units:8,q:40,desc:"靜電、電流與電壓、歐姆定律、電流熱效應，以及磁場、電流磁效應、電動機與電磁感應。"},
+ {k:"D",c:"bio",name:"生物體的構造與功能",isle:"生物構造島",col:"#7aa35a",ready:true,file:"D.html",thumb:"D-top.jpg",units:18,q:90,desc:"顯微鏡與細胞構造、擴散與滲透、組成層次、細胞分裂，消化、循環、呼吸系統，植物的運輸與花的構造，以及神經、內分泌與免疫：生物體如何分工合作、維持恆定。"},
+ {k:"G",c:"bio",name:"演化與延續",isle:"演化島",col:"#8fb173",ready:true,file:"G.html",thumb:"G-top.jpg",units:16,q:80,desc:"無性與有性生殖、減數分裂、人體生殖系統，孟德爾與基因遺傳、性別與血型、突變與生物技術，以及化石、天擇、生物分類與五界、微生物：生命如何延續與改變。"},
+ {k:"L",c:"bio",name:"生物與環境",isle:"生態島",col:"#5f9b5b",ready:true,file:"L.html",thumb:"L-top.jpg",units:14,q:70,desc:"個體、族群、群集與生態系，非生物因子與交互作用，食物網、能量塔與碳循環，陸域與水域生態系、演替，以及人類活動的影響與保育行動。"},
+ {k:"F",c:"geo",name:"地球環境",isle:"地球環境島",col:"#5aa6a0",ready:true,file:"F.html",thumb:"F-top.jpg",units:11,q:55,desc:"地球的三圈、海水與水的分布、礦物與三大類岩石、岩石循環、大氣的組成與分層，以及太陽系、類地行星、月相與日月食。"},
+ {k:"H",c:"geo",name:"地球的歷史",isle:"地球歷史島",col:"#b08a62",ready:true,file:"H.html",thumb:"H-top.jpg",units:10,q:50,desc:"化石怎麼形成、化石的種類、指相化石與地質年代，地層的疊置、褶皺、斷層、岩脈入侵與侵蝕面，剖面判讀與地層對比。"},
+ {k:"I",c:"geo",name:"變動的地球",isle:"變動的地球島",col:"#c06a1a",ready:true,file:"I.html",thumb:"I-top.jpg",units:16,q:80,desc:"內營力與外營力、板塊運動、地震與火山分布，晝夜與四季，氣壓與風、鋒面、季風、颱風、梅雨寒潮乾旱，以及波浪、海流與潮汐。"},
+ {k:"M",c:"x",name:"科學、科技、社會及人文",isle:"科技人文島",col:"#a07a5a",ready:true,file:"M.html",thumb:"M-top.jpg",units:14,q:70,desc:"科學史與生物技術、生活中的材料與用電安全、電費計算，颱風、地震、山崩等天然災害，以及空氣、水、重金屬與噪音光害等環境汙染。"},
+ {k:"P",tag:"競",c:"game",name:"理化獸競技場：用學到的科學養成理化獸",isle:"理化獸競技島",col:"#e0583a",ready:true,file:"P.html",thumb:"P-top.jpg",units:16,q:16,desc:"在培育中心領養最多 3 隻理化獸，用各島集到的印章、和島民聊天、寫會考題、競技場戰鬥累積的經驗能量讓牠們升級進化，再到競技場一關一島挑戰對手。"},
+ {k:"N",c:"x",name:"資源與永續發展",isle:"永續島",col:"#4e8a62",ready:true,file:"N.html",thumb:"N-top.jpg",units:14,q:70,desc:"生物資源的永續利用、節約能源與 5R、廢棄物，溫室效應與氣候變遷的減緩和調適，化石燃料、再生能源與臺灣的能源選擇。"}
+];
+const CAT={pc:"理化海域",bio:"生物灣",geo:"地科群島",x:"跨科航道",game:"競技島"};
+const ISLES=[["A","sciIsles.v1","sciIsles"],["I","sciIsles.I.v1","sciIslesI"],["B","sciIsles.B.v1","sciIslesB"],["E","sciIsles.E.v1","sciIslesE"],["K","sciIsles.K.v1","sciIslesK"],["Q","sciIsles.Q.v1","sciIslesQ"],["H","sciIsles.H.v1","sciIslesH"],["J","sciIsles.J.v1","sciIslesJ"],["F","sciIsles.F.v1","sciIslesF"],["C","sciIsles.C.v1","sciIslesC"],["D","sciIsles.D.v1","sciIslesD"],["G","sciIsles.G.v1","sciIslesG"],["L","sciIsles.L.v1","sciIslesL"],["N","sciIsles.N.v1","sciIslesN"],["M","sciIsles.M.v1","sciIslesM"]];
+const loadK=k=>{try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}};
+const progs=Object.fromEntries(ISLES.map(([k,key])=>[k,loadK(key)]));
+const prog={answered:{},visited:{}};ISLES.forEach(([k])=>{Object.assign(prog.answered,progs[k].answered||{});Object.assign(prog.visited,progs[k].visited||{})});
+(async()=>{try{const use=window.claude&&window.claude.use;if(!use)return;const [db,user]=await Promise.all([use("db"),use("user")]);if(!db||!user)return;const id=await user.id();if(!id)return;let changed=false;
+  for(const [k,key,doc] of ISLES.concat([["V","sciIsles.I.v1","sciIslesV"]])){const snap=await db.doc("data/users/"+id+"/"+doc).get();if(!snap.exists)continue;const c=window.SPLIT?SPLIT.cloud(k,JSON.parse(snap.data().p)):JSON.parse(snap.data().p),p=progs[k]=loadK(key);
+    ["answered","labs","stamps","visited"].forEach(f=>{p[f]=p[f]||{};for(const x in (c[f]||{}))if(!p[f][x]&&c[f][x]){p[f][x]=c[f][x];changed=true}});
+    if(changed){try{localStorage.setItem(key,JSON.stringify(p))}catch(e){}}}
+  if(changed)location.reload()}catch(e){}})();
+const answered=prog.answered||{};
+const PK=loadK("sciIsles.P.v1");
+const rightOf=k=>{if(k==="P")return Object.keys(PK.clear||{}).length;const a=(progs[k]||{}).answered||{};return Object.keys(a).filter(id=>a[id]).length};
+const stampsOf=k=>{const s=(progs[k]||{}).stamps||{};return Object.keys(s).filter(x=>s[x]).length};
+const visited=k=>k==="P"?!!((PK.mons||[]).length):!!((prog.visited||{})[k]||Object.keys((progs[k]||{}).stamps||{}).length||rightOf(k));
+const $=id=>document.getElementById(id);
+let last=null;try{last=localStorage.getItem("sciIsles.lastIsle")}catch(e){}
+const remember=k=>{try{localStorage.setItem("sciIsles.lastIsle",k)}catch(e){}};
+
+/* ---------- 時段：跟著真實時間，也可以手動切換 ---------- */
+const PAL={
+ dawn:{sky:["#f6b9a8","#fbd9c0","#fff1d8"],sea:["#8cc0c8","#6aa6b6","#4f8ba3"],ink:"#5a2f2a",sun:"#ffd9a0",g:"早安，晨光剛照到海面"},
+ day:{sky:["#7fbde3","#c6e6f2","#f6ecd6"],sea:["#6fb7c4","#4f9db0","#3b8299"],ink:"#173a4a",sun:"#fff2c0",g:"午安，海面很平靜，適合出航"},
+ dusk:{sky:["#6f6aa8","#e58f7a","#f8c98a"],sea:["#6d8fa8","#4f7395","#3a5a80"],ink:"#2c1d3a",sun:"#ffb36a",g:"傍晚了，夕陽把海染成金色"},
+ night:{sky:["#0e1838","#22305e","#3c4a7a"],sea:["#2a4a6e","#1e3a5c","#142b48"],ink:"#eef0ff",sun:"#f4f1dc",g:"晚安，島上的燈都亮起來了"}};
+const MODES=["auto","dawn","day","dusk","night"],MNAME={auto:"跟著真實時間",dawn:"清晨",day:"白天",dusk:"黃昏",night:"夜晚"};
+let mode="auto";try{mode=localStorage.getItem("sciIsles.tod")||"auto"}catch(e){}
+const realTod=()=>{const h=new Date().getHours()+new Date().getMinutes()/60;return h<5?"night":h<7.5?"dawn":h<16.5?"day":h<18.8?"dusk":"night"};
+let tod="day";
+function applyTod(){tod=mode==="auto"?realTod():mode;const p=PAL[tod],r=document.documentElement.style;
+  ["sky-1","sky-2","sky-3"].forEach((v,i)=>r.setProperty("--"+v,p.sky[i]));["sea-1","sea-2","sea-3"].forEach((v,i)=>r.setProperty("--"+v,p.sea[i]));r.setProperty("--hero-ink",p.ink);r.setProperty("--sail-bg",tod==="night"?"#f4e9c8":p.ink);r.setProperty("--sail-fg",tod==="night"?"#1b2440":"#fffaf3");document.documentElement.dataset.tod=tod;
+  $("greet").textContent=p.g;$("tod").textContent=MNAME[mode]}
+$("tod").onclick=()=>{mode=MODES[(MODES.indexOf(mode)+1)%MODES.length];try{localStorage.setItem("sciIsles.tod",mode)}catch(e){}applyTod()};
+applyTod();setInterval(()=>{if(mode==="auto")applyTod()},60000);
+
+/* ---------- 統計與出發按鈕 ---------- */
+const TQ=THEMES.filter(t=>t.k!=="P"),totQ=TQ.reduce((s,t)=>s+t.q,0),gotQ=TQ.reduce((s,t)=>s+rightOf(t.k),0),totS=TQ.reduce((s,t)=>s+t.units,0),gotS=TQ.reduce((s,t)=>s+stampsOf(t.k),0);
+$("sVis").textContent=TQ.filter(t=>visited(t.k)).length;$("sQ").textContent=gotQ;$("sQT").textContent=totQ;$("sSt").textContent=gotS;$("sStT").textContent=totS;
+{const t=THEMES.find(t=>t.k===last);if(t){$("sail").textContent=`繼續航行：${t.isle}`;$("sail").href=t.file}
+  else{const nx=TQ.find(t=>!visited(t.k))||THEMES[0];$("sail").textContent=`${visited("A")?"下一站":"從這裡出發"}：${nx.isle}`;$("sail").href=nx.file;$("sail").dataset.k=nx.k}
+  $("sail").addEventListener("click",()=>remember((THEMES.find(t=>$("sail").href.endsWith(t.file))||{}).k||"A"))}
+
+/* ---------- 航海圖：六角島，蜂巢排列（沿用原本的島型與排列） ---------- */
+const ORDER=["A","B","C","D","E","F","G","H","I","J","K","Q","L","M","N","P"];
+const R=46,HW=R*Math.sqrt(3)/2,DX=HW*2+12,DY=R*1.5+44,X0=20,Y0=26;
+const W=X0*2+HW*2+DX*2.5,H=Y0+DY*(Math.ceil(ORDER.length/3)-1)+R*2+50;
+const map=$("map");map.style.aspectRatio=`${W}/${H}`;
+const hexPts=(cx,cy,r)=>[0,1,2,3,4,5].map(i=>{const a=Math.PI/180*(60*i-90);return[cx+r*Math.cos(a),cy+r*Math.sin(a)]});
+const ptsStr=p=>p.map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join(" ");
+const HPOS=ORDER.map((k,o)=>{const row=Math.floor(o/3),col=o%3;return[X0+HW+col*DX+(row%2?DX/2:0),Y0+R+row*DY]});
+let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="自然科學島地圖" class="hxmap"><defs><filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5"/></filter><filter id="pgl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter></defs>`;
+HPOS.forEach(([x,y])=>{svg+=`<polygon points="${ptsStr(hexPts(x,y+6,R+15))}" fill="#bfe8e2" opacity=".55" filter="url(#soft)"/><polygon points="${ptsStr(hexPts(x,y+6,R+6))}" fill="#cdeee6" opacity=".7"/>`});
+const gEls=[];
+ORDER.forEach((k,o)=>{const ti=THEMES.findIndex(t=>t.k===k),t=THEMES[ti],[x,y]=HPOS[o],id="st"+t.k;
+  svg+=`<pattern id="${id}" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#f3ece0"/><rect width="5" height="10" fill="${t.col}"/></pattern>`;
+  if(k==="P")svg+=`<g class="pglow" aria-hidden="true"><polygon points="${ptsStr(hexPts(x,y+4,R+12))}" fill="#ffc24a" filter="url(#pgl)"/><polygon class="pring" points="${ptsStr(hexPts(x,y+4,R+5))}" fill="none" stroke="#fff1b8" stroke-width="4" stroke-linejoin="round"/></g>`+[[-.95,-.55,0],[.98,.15,.8],[-.7,.75,1.6],[.55,-.95,2.4]].map(([a,b,d])=>`<path class="ptw" style="animation-delay:${d}s" transform="translate(${(x+a*(R+10)).toFixed(1)} ${(y+b*(R+10)).toFixed(1)})" d="M0-7C1-2 2-1 7 0C2 1 1 2 0 7C-1 2-2 1-7 0C-2-1-1-2 0-7Z" fill="#fff6c8"/>`).join("");
+  svg+=`<g class="isle" data-i="${ti}" tabindex="0" role="button" aria-label="${t.tag||t.k} ${t.isle}" style="--dl:${(-o*.7).toFixed(1)}s"><g class="bobg">`;
+  const p=hexPts(x,y,R),q=hexPts(x,y+11,R);
+  svg+=`<polygon points="${ptsStr([p[1],p[2],p[3],p[4],q[4],q[3],q[2],q[1]])}" fill="url(#${id})"/>`;
+  svg+=`<g class="top"><polygon points="${ptsStr(p)}" fill="#efe6d6"/><clipPath id="cl${t.k}"><polygon points="${ptsStr(p)}"/></clipPath><image class="thumb" href="${t.thumb}" x="${x-HW}" y="${y-R}" width="${HW*2}" height="${R*2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cl${t.k})"/><polygon points="${ptsStr(p)}" fill="none" stroke="#fffaf3" stroke-width="2.5"/></g>`;
+  const label=t.isle,tw=(t.tag||t.k).length*(/[^\x00-\x7f]/.test(t.tag||t.k)?13:7.5),w=14.5+tw+label.length*12.5;
+  svg+=`<g class="pill"><rect x="${x-w/2}" y="${y+R-6}" width="${w}" height="24" rx="12" fill="#fffaf3"/><text x="${x-w/2+11}" y="${y+R+10.5}" font-family="JetBrains Mono, monospace" font-weight="700" font-size="12" fill="${t.col}">${t.tag||t.k}</text><text x="${x-w/2+16.5+tw}" y="${y+R+10.5}" font-family="Noto Sans TC, sans-serif" font-weight="700" font-size="11.5" fill="#3b302a">${label}</text></g>`;
+  const got=rightOf(t.k),f=got/t.q,cx=x+R*.78,cy=y-R*.68,rr=13,c=2*Math.PI*rr;
+  svg+=`<g><circle cx="${cx}" cy="${cy}" r="${rr+4}" fill="#fffaf3"/><circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="#ece2d4" stroke-width="4"/><circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${t.col}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(c*f).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/><text x="${cx}" y="${cy+4}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="10" fill="#3b302a">${Math.round(f*100)}</text></g>`;
+  if(last===t.k){const lw=78;svg+=`<g><rect x="${x-lw/2}" y="${y-R-22}" width="${lw}" height="20" rx="10" fill="#e2774a"/><text x="${x}" y="${y-R-8}" text-anchor="middle" font-family="Noto Sans TC, sans-serif" font-weight="800" font-size="11" fill="#fff">上次在這裡</text></g>`}
+  svg+=`</g></g>`});
+svg+=`</svg>`;
+map.insertAdjacentHTML("beforeend",svg);
+const isls=THEMES.map((t,i)=>map.querySelector(`.isle[data-i="${i}"]`));
+map.addEventListener("click",e=>{const g=e.target.closest(".isle");if(g)openSheet(+g.dataset.i)});
+map.addEventListener("keydown",e=>{const g=e.target.closest(".isle");if(g&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openSheet(+g.dataset.i)}});
+const islePts=()=>HPOS.map(([x,y])=>[x/W*SW,y/H*SH]);
+let wide=false;
+function layout(){sizeSea()}
+
+/* ---------- 海的動畫（波光、航線、帆船、海鳥） ---------- */
+const sc=$("seaCv"),sg=sc.getContext("2d");let SW=0,SH=0,DPR=1;
+function sizeSea(){DPR=Math.min(2,devicePixelRatio||1);SW=map.clientWidth;SH=map.clientHeight;sc.width=SW*DPR;sc.height=SH*DPR;sg.setTransform(DPR,0,0,DPR,0,0);buildRoute()}
+let route=[],rlen=0;
+function buildRoute(){const P=islePts();route=[];
+  const cr=(p0,p1,p2,p3,t)=>{const t2=t*t,t3=t2*t;return[.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3),.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)]};
+  for(let i=0;i<P.length-1;i++){const p0=P[Math.max(0,i-1)],p1=P[i],p2=P[i+1],p3=P[Math.min(P.length-1,i+2)];for(let s=0;s<24;s++)route.push(cr(p0,p1,p2,p3,s/24))}route.push(P[P.length-1]);
+  rlen=0;route=route.map((p,i)=>{if(i)rlen+=Math.hypot(p[0]-route[i-1][0],p[1]-route[i-1][1]);return[p[0],p[1],rlen]})}
+const along=d=>{d=((d%rlen)+rlen)%rlen;let i=1;while(i<route.length-1&&route[i][2]<d)i++;const a=route[i-1],b=route[i],f=(d-a[2])/((b[2]-a[2])||1);return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,Math.atan2(b[1]-a[1],b[0]-a[0])]};
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const sparks=Array.from({length:90},()=>({x:rnd(),y:rnd(),p:rnd()*6,s:.6+rnd()}));
+const crests=Array.from({length:46},()=>({x:rnd(),y:rnd(),w:14+rnd()*26,p:rnd()*6,v:.4+rnd()*.6}));
+const gulls=Array.from({length:3},(_,i)=>({x:rnd(),y:.1+rnd()*.8,v:.012+rnd()*.01,p:rnd()*6}));
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function drawSea(T){if(!SW)return;const g=sg,night=tod==="night",dusk=tod==="dusk";g.clearRect(0,0,SW,SH);
+  // 斜斜的光帶
+  g.save();g.globalAlpha=night?.08:.13;g.fillStyle=night?"#cfd8ff":"#ffffff";for(let i=0;i<5;i++){const x=((i*.27+T*.004)%1.4-.2)*SW;g.beginPath();g.moveTo(x,0);g.lineTo(x+SW*.06,0);g.lineTo(x-SW*.18,SH);g.lineTo(x-SW*.24,SH);g.fill()}g.restore();
+  // 浪花
+  crests.forEach(c=>{const x=((c.x+T*.006*c.v)%1.1-.05)*SW,y=c.y*SH,a=.25+.25*Math.sin(T*.8+c.p);g.strokeStyle=night?`rgba(180,200,255,${a*.6})`:`rgba(255,255,255,${a})`;g.lineWidth=1.6;g.lineCap="round";g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+c.w/2,y-4,x+c.w,y);g.stroke()});
+  // 波光
+  sparks.forEach(s=>{const a=Math.max(0,Math.sin(T*1.6+s.p));if(a<.6)return;g.fillStyle=night?`rgba(255,250,210,${(a-.6)*1.6})`:`rgba(255,255,255,${(a-.6)*2})`;g.beginPath();g.arc(s.x*SW,s.y*SH,s.s*1.5,0,7);g.fill()});
+  // 航線
+  if(route.length){g.strokeStyle=night?"rgba(255,240,200,.55)":"rgba(255,250,240,.8)";g.lineWidth=2.2;g.setLineDash([2,9]);g.lineDashOffset=-T*6;g.beginPath();route.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.stroke();g.setLineDash([]);
+    // 帆船
+    const [bx,by,ba]=along(T*16+40),s=Math.max(.8,Math.min(1.3,SW/420)),flip=Math.cos(ba)<0?-1:1;
+    g.save();g.translate(bx,by);g.scale(s*flip,s);g.fillStyle="rgba(255,255,255,.5)";g.beginPath();g.ellipse(-16,6,16,3,0,0,7);g.fill();
+    g.rotate(Math.sin(T*1.7)*.05);g.fillStyle="#8a5a3c";g.beginPath();g.moveTo(-13,0);g.lineTo(13,0);g.lineTo(9,7);g.lineTo(-9,7);g.closePath();g.fill();g.strokeStyle="#6a4a34";g.lineWidth=1.4;g.beginPath();g.moveTo(0,0);g.lineTo(0,-24);g.stroke();
+    g.fillStyle=night?"#e8e2d0":"#fffaf0";g.beginPath();g.moveTo(1.5,-23);g.quadraticCurveTo(14,-12,12,-2);g.lineTo(1.5,-2);g.closePath();g.fill();g.fillStyle="#e2774a";g.beginPath();g.moveTo(-1.5,-20);g.lineTo(-10,-3);g.lineTo(-1.5,-3);g.closePath();g.fill();
+    if(night){g.fillStyle="rgba(255,220,140,.9)";g.beginPath();g.arc(0,-26,2,0,7);g.fill()}g.restore()}
+  // 海鳥
+  if(!night)gulls.forEach(b=>{const x=((b.x+T*b.v)%1.2-.1)*SW,y=b.y*SH+Math.sin(T*.7+b.p)*10,w=Math.sin(T*6+b.p)*4;g.strokeStyle="rgba(40,60,70,.55)";g.lineWidth=1.6;g.beginPath();g.moveTo(x-8,y-w);g.quadraticCurveTo(x-4,y-4,x,y);g.quadraticCurveTo(x+4,y-4,x+8,y-w);g.stroke()});
+  // 夜晚：島上燈火的倒影
+  if(night||dusk)islePts().forEach(([x,y])=>{const r=R/W*SW*1.1;const gr=g.createRadialGradient(x,y,r*.5,x,y,r*1.6);gr.addColorStop(0,night?"rgba(255,210,120,.3)":"rgba(255,190,120,.15)");gr.addColorStop(1,"rgba(255,210,120,0)");g.fillStyle=gr;g.beginPath();g.arc(x,y,r*1.6,0,7);g.fill()})}
+
+/* ---------- 天空的動畫（太陽或月亮、雲、星星） ---------- */
+const kc=$("skyCv"),kg=kc.getContext("2d");let KW=0,KH=0;
+function sizeSky(){const r=$("sky");KW=r.clientWidth;KH=r.clientHeight;kc.width=KW*DPR;kc.height=KH*DPR;kg.setTransform(DPR,0,0,DPR,0,0)}
+const clouds=Array.from({length:6},(_,i)=>({x:rnd(),y:.12+rnd()*.5,s:.6+rnd()*.8,v:.004+rnd()*.006}));
+const stars=Array.from({length:70},()=>({x:rnd(),y:rnd()*.8,p:rnd()*6,s:.5+rnd()*1.2}));
+function drawSky(T){if(!KW)return;const g=kg,p=PAL[tod],night=tod==="night";g.clearRect(0,0,KW,KH);
+  if(night)stars.forEach(s=>{const a=.4+.6*Math.abs(Math.sin(T*.8+s.p));g.fillStyle=`rgba(255,255,240,${a})`;g.beginPath();g.arc(s.x*KW,s.y*KH,s.s,0,7);g.fill()});
+  const sx=KW*(tod==="dawn"?.18:tod==="dusk"?.82:night?.8:.78),sy=KH*(tod==="day"?.22:night?.2:.62),R=Math.min(70,KW*.09);
+  const gl=g.createRadialGradient(sx,sy,R*.3,sx,sy,R*3.2);gl.addColorStop(0,night?"rgba(240,240,220,.35)":"rgba(255,240,200,.75)");gl.addColorStop(1,"rgba(255,240,200,0)");g.fillStyle=gl;g.beginPath();g.arc(sx,sy,R*3.2,0,7);g.fill();
+  g.fillStyle=p.sun;g.beginPath();g.arc(sx,sy,R*.62,0,7);g.fill();if(night){g.fillStyle=p.sky[0];g.beginPath();g.arc(sx+R*.28,sy-R*.16,R*.55,0,7);g.fill()}
+  clouds.forEach(c=>{const x=((c.x+T*c.v*.3)%1.3-.15)*KW,y=c.y*KH,s=c.s*Math.max(.8,KW/700);g.fillStyle=night?"rgba(120,130,170,.35)":tod==="dusk"?"rgba(255,215,200,.75)":"rgba(255,255,255,.82)";
+    [[0,0,26],[22,-10,22],[44,0,24],[20,6,24]].forEach(([dx,dy,r])=>{g.beginPath();g.arc(x+dx*s,y+dy*s,r*s,0,7);g.fill()})});
+  // 遠方的海平線與小島剪影
+  const hy=KH-10;g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--sea-1");g.fillRect(0,hy,KW,12);
+  g.fillStyle=night?"rgba(20,30,60,.6)":"rgba(70,110,110,.35)";[[.1,40],[.62,26],[.9,34]].forEach(([fx,w])=>{const x=fx*KW;g.beginPath();g.moveTo(x-w,hy);g.quadraticCurveTo(x,hy-w*.45,x+w,hy);g.fill()})}
+
+/* ---------- 迴圈 ---------- */
+function frame(t){const T=t/1000;drawSea(T);drawSky(T);if(!reduce)requestAnimationFrame(frame)}
+addEventListener("resize",()=>{layout();sizeSky()});layout();sizeSky();requestAnimationFrame(frame);
+if(reduce){const re=()=>{drawSea(0);drawSky(0)};$("tod").addEventListener("click",re)}
+
+/* ---------- 目錄 ---------- */
+let flt="all";
+function renderCards(){$("cards").innerHTML=THEMES.map((t,i)=>{if(flt!=="all"&&t.c!==flt)return"";const got=rightOf(t.k),f=got/t.q;
+  return`<button class="card" data-i="${i}"><div class="ph"><img src="${t.thumb}" alt="" loading="lazy"><i style="background:${t.col}">${t.tag||t.k}</i></div><div class="tx"><div class="nm">${t.isle}</div><div class="th">${t.name}</div><div class="pb"><b style="width:${f*100}%;background:${t.col}"></b></div><div class="pn">${CAT[t.c]}・${t.k==="P"?"通關":"答對"} ${got}/${t.q}</div></div></button>`}).join("");
+  $("cards").querySelectorAll(".card").forEach(c=>c.onclick=()=>openSheet(+c.dataset.i))}
+$("flt").querySelectorAll("button").forEach(b=>b.onclick=()=>{flt=b.dataset.c;$("flt").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderCards()});
+renderCards();
+
+/* ---------- 島卡 ---------- */
+function openSheet(i){const t=THEMES[i];isls.forEach((b,j)=>b.classList.toggle("on",j===i));
+  $("bImg").src=t.thumb;$("bB").textContent=t.tag||t.k;$("bB").style.background=t.col;
+  $("bE").textContent=`THEME ${t.tag||t.k}・${CAT[t.c]}`;$("bE").style.color=t.col;$("bT").textContent=t.name;$("bN").textContent=t.isle;$("bS").textContent=t.desc;
+  const got=rightOf(t.k),st=stampsOf(t.k);
+  if(t.k==="P"){const st=Object.values(PK.clear||{}).reduce((a,b)=>a+b,0),ms=(PK.mons||[]).length;
+    $("bProg").innerHTML=`<div class="bar"><i style="width:${got/t.q*100}%;background:${t.col}"></i></div><div class="meta"><span class="tg">${t.units} 關挑戰</span><span class="tg">通關 ${got}/${t.q}</span><span class="tg">星星 ${st}/${t.q*3}</span><span class="tg">理化獸 ${ms}/3</span></div>`}else
+  $("bProg").innerHTML=`<div class="bar"><i style="width:${got/t.q*100}%;background:${t.col}"></i></div><div class="meta"><span class="tg">${t.units} 個單元</span><span class="tg">集章 ${st}/${t.units}</span><span class="tg">例題答對 ${got}/${t.q}</span><span class="tg">${visited(t.k)?"已登島":"還沒登島"}</span></div>`+
+    (t.k==="J"?`<div class="meta"><a class="tg" href="Jp.html" style="border-color:${t.col};color:${t.col};font-weight:700">試玩行星版（原型）</a></div>`:"");
+  $("bGo").href=t.file;$("bGo").textContent=`登上 ${t.isle} →`;$("bGo").onclick=()=>remember(t.k);
+  const sy=scrollY;document.body.classList.add("open");setTimeout(()=>{$("x").focus({preventScroll:true});if(Math.abs(scrollY-sy)>2)scrollTo(0,sy)},350)}
+function closeSheet(){const sy=scrollY;document.body.classList.remove("open");requestAnimationFrame(()=>{if(Math.abs(scrollY-sy)>2)scrollTo(0,sy)});isls.forEach(b=>b.classList.remove("on"))}
+$("x").onclick=closeSheet;$("scrim").onclick=closeSheet;addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+
+(function capHome(){const go=()=>{if(!window.CAP)return setTimeout(go,300);
+const run=f=>()=>f();$("capGo").onclick=run(CAP.exam);$("capFull").onclick=()=>CAP.exam(10);$("capQuick").onclick=()=>CAP.exam(25);$("capDiagB").onclick=run(CAP.diag);$("dNb").onclick=run(CAP.notebook);$("dAc").onclick=run(CAP.achWall);$("dRp").onclick=run(CAP.report);
+const day=()=>{const d=CAP.daily();$("dSt").textContent=d.streak;$("dFl").classList.toggle("on",d.streak>0||d.done);
+  $("dT").textContent=d.done?"今天的任務都完成了":d.streak?`已連續 ${d.streak} 天，今天也別斷火`:"完成三個任務，點燃火焰";
+  $("dTk").innerHTML=d.tasks.map(t=>`<div class="${t.p>=t.n?"ok":""}"><span>${t.t}</span><i><b style="width:${t.p/t.n*100}%"></b></i><em>${t.p}/${t.n}</em></div>`).join("");
+  $("dNb").textContent=d.due?`錯題本（今天 ${d.due} 題）`:"錯題本";$("dAc").textContent=`成就牆 ${d.ach}/${d.achN}`};
+day();CAP.onChange(day);
+const pad=n=>String(n).padStart(2,"0"),esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const draw=()=>{const r=CAP.recommend(),s=r.s;if(s.tot<3)return;const el=$("capDiag");
+  $("capDT").textContent=r.list.length?"推薦先去這幾座島":"各島表現都不錯";
+  el.innerHTML=r.list.length?r.list.map(x=>{const u=x.units[0];const href=x.k==="S"?null:x.k+".html"+(u?"#u"+u.u:"");
+    const sub=x.k==="S"?"多做各島的動手實驗，練習控制變因與資料判讀":(x.units.length?"先看 "+x.units.map(v=>pad(v.u)+" "+esc(CAP.unitName(x.k,v.u))).join("、"):"把會考塔的題目再練一輪");
+    return `<${href?'a href="'+href+'"':"div"} class="pdr"><i style="background:${CAP.icol(x.k)}"></i><div><b>${esc(CAP.iname(x.k))}</b><span>${sub}</span></div><em>${Math.round(x.acc*100)}%</em></${href?"a":"div"}>`}).join(""):
+    `<p>累計 ${s.tot} 次作答、答對率 ${Math.round(s.ok/s.tot*100)}%。挑一座還沒登頂的會考塔繼續爬吧。</p>`};
+CAP.onChange(draw);const ld=()=>CAP.load().then(d=>{$("capN").textContent=d.q.length;draw()}).catch(()=>{});const idle=()=>(window.requestIdleCallback?requestIdleCallback(ld,{timeout:5000}):setTimeout(ld,800));document.readyState==="complete"?setTimeout(idle,1200):addEventListener("load",()=>setTimeout(idle,1200),{once:true})};go()})();
+</script>
+
+<script>
+/* 我的存檔：把 sciIsles.* 的進度存成檔案，或從檔案還原（不改動任何鍵名） */
+(()=>{const FMT="sciIsles-save",PRE="sciIsles",$=id=>document.getElementById(id),pad=n=>String(n).padStart(2,"0");
+const keys=()=>{const o=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);k&&k.indexOf(PRE)===0&&k!==PRE+".lastBackup"&&o.push(k)}}catch(e){}return o.sort()};
+const snap=()=>{const d={};keys().forEach(k=>{try{d[k]=localStorage.getItem(k)}catch(e){}});return d};
+const J=(d,k)=>{try{return JSON.parse(d[k]||"null")||{}}catch(e){return{}}};
+const lvOf=xp=>{let lv=1,s=0;while(lv<30){const n=30+lv*15;if(xp<s+n)break;s+=n;lv++}return lv};
+const sum=d=>{let st=0,isl=0;Object.keys(d).forEach(k=>{if(!/^sciIsles\.([A-Z]\.)?v1$/.test(k))return;const s=J(d,k).stamps||{},n=Object.keys(s).filter(x=>s[x]).length;st+=n;n&&isl++});
+  const P=J(d,"sciIsles.P.v1"),m=P.mons||[],c=J(d,"sciIsles.cap.v1"),a=c.a||{};
+  return{st,isl,mons:m.length,lv:m.length?Math.max(...m.map(x=>lvOf(x.xp||0))):0,clear:Object.keys(P.clear||{}).length,cap:Object.keys(a).length,outfit:!!d["sciIsles.avatar"],keys:Object.keys(d).length}};
+const empty=s=>!s.st&&!s.mons&&!s.cap&&!s.outfit;
+const stamp=t=>{const d=new Date(t);return`${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const lastB=()=>{try{return+localStorage.getItem(PRE+".lastBackup")||0}catch(e){return 0}};
+function refresh(){const s=sum(snap()),t=lastB(),card=$("saveCard");if(!card)return;const days=t?Math.floor((Date.now()-t)/864e5):-1;
+  card.classList.toggle("due",!empty(s)&&(days<0||days>=7));
+  $("svT").textContent=empty(s)?"把進度存成檔案":t?(days<1?"今天已經備份過了":`上次備份是 ${days} 天前`):"還沒有備份過進度";
+  if(!empty(s))$("svP").innerHTML=`這台裝置目前有 <b>${s.st}</b> 個印章、<b>${s.mons}</b> 隻理化獸${s.mons?`（最高 Lv${s.lv}）`:""}、會考題作答 <b>${s.cap}</b> 題。進度只存在這台裝置的瀏覽器裡，建議每週下載一次存檔自己保管；換裝置或清掉瀏覽器資料後，讀取存檔就能接著玩。`}
+function modal(html){const m=document.createElement("div");m.className="svm";m.innerHTML=`<div class="bx" role="dialog" aria-modal="true">${html}</div>`;m.addEventListener("click",e=>{e.target===m&&m.remove()});document.body.appendChild(m);return m}
+async function save(note){const d=snap(),s=sum(d),now=Date.now(),t=new Date(now);
+  const file={format:FMT,v:1,app:"自然科學島",author:"辛巴王",savedAt:new Date(now).toISOString(),summary:s,data:d};
+  const name=`自然科學島存檔_${t.getFullYear()}${pad(t.getMonth()+1)}${pad(t.getDate())}_${pad(t.getHours())}${pad(t.getMinutes())}.json`,txt=JSON.stringify(file);
+  let ok=false;try{const dl=window.claude&&await claude.use("downloads");if(dl){await dl.save({filename:name,data:txt});ok=true}}catch(e){if(e&&e.code==="declined")return false}
+  if(!ok){try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"application/json"}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);ok=true}catch(e){}}
+  if(ok){try{localStorage.setItem(PRE+".lastBackup",String(now))}catch(e){}refresh();if(note!==false){const mm=modal(`<h3>存檔已下載</h3><p>檔名：<b>${name}</b></p><p>請把它存到雲端硬碟、傳到自己的 LINE 或 Email，換裝置時才找得到。</p><div class="prow"><button class="pbtn" data-x>好</button></div>`);mm.querySelector("[data-x]").onclick=()=>mm.remove()}}
+  return ok}
+function row(l,a,b){return`<tr><td>${l}</td><td><b>${a}</b></td><td><b>${b}</b></td></tr>`}
+function load(file){const r=new FileReader();r.onload=()=>{let f=null;try{f=JSON.parse(r.result)}catch(e){}
+  if(!f||f.format!==FMT||!f.data||typeof f.data!=="object"){const mm=modal(`<h3>讀不懂這個檔案</h3><p class="err">這不是自然科學島的存檔檔案。</p><p>請選擇從「下載存檔」得到、檔名開頭是「自然科學島存檔」的 .json 檔。</p><div class="prow"><button class="pbtn" data-x>好</button></div>`);mm.querySelector("[data-x]").onclick=()=>mm.remove();return}
+  const data={};Object.keys(f.data).forEach(k=>{k.indexOf(PRE)===0&&typeof f.data[k]==="string"&&(data[k]=f.data[k])});
+  const a=sum(snap()),b=sum(data),when=f.savedAt?stamp(f.savedAt):"不明";
+  const m=modal(`<h3>要讀取這個存檔嗎？</h3><p>存檔時間：<b>${when}</b></p><table><tr><th></th><th>這台裝置目前</th><th>存檔裡</th></tr>${row("印章",a.st,b.st)}${row("理化獸",a.mons+(a.mons?"（Lv"+a.lv+"）":""),b.mons+(b.mons?"（Lv"+b.lv+"）":""))}${row("競技場過關",a.clear,b.clear)}${row("會考題作答",a.cap,b.cap)}</table><p>讀取後，這台裝置的進度會<b>換成存檔裡的內容</b>。${empty(a)?"":"如果目前的進度也想留著，請先按「先備份目前進度」。"}</p><div class="prow"><button class="pbtn warn" data-go>讀取存檔</button>${empty(a)?"":'<button class="pbtn alt" data-bk>先備份目前進度</button>'}<button class="pbtn alt" data-x>取消</button></div>`);
+  m.querySelector("[data-x]").onclick=()=>m.remove();const bk=m.querySelector("[data-bk]");bk&&(bk.onclick=async()=>{if(await save(false)){bk.textContent="已備份目前進度";bk.disabled=true}});
+  m.querySelector("[data-go]").onclick=()=>{try{keys().forEach(k=>localStorage.removeItem(k));Object.keys(data).forEach(k=>localStorage.setItem(k,data[k]));localStorage.setItem(PRE+".lastBackup",String(Date.parse(f.savedAt)||Date.now()))}catch(e){m.querySelector(".bx").insertAdjacentHTML("beforeend",'<p class="err">寫入失敗，可能是瀏覽器空間不足或無痕模式。</p>');return}
+    m.querySelector(".bx").innerHTML="<h3>讀取完成</h3><p>正在重新載入…</p>";setTimeout(()=>location.reload(),700)}};
+  r.readAsText(file)}
+const go=()=>{if(!$("svDl"))return;$("svDl").onclick=()=>save();$("svUp").onclick=()=>$("svIn").click();$("svIn").onchange=e=>{const f=e.target.files&&e.target.files[0];f&&load(f);e.target.value=""};refresh()};
+document.readyState==="loading"?document.addEventListener("DOMContentLoaded",go):go()})();
+</script>
+
+</body></html>
