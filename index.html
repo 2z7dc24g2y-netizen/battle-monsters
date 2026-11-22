@@ -1013,7 +1013,7 @@ function renderTeachers() {
   }; });
   $('#tlist').querySelectorAll('[data-del]').forEach(function (b) { b.onclick = function () {
     if (!confirm('確定要刪除老師「' + b.dataset.nm + '」嗎？\n刪除後他就不能再登入，要再用只能重新申請或由你重新開通。\n（如果他還有班級，需要先把班級轉給別的老師。）')) return;
-    busy(b, true, ''); call('adminDeleteTeacher', { tok: S.tok, id: b.dataset.del }).then(function () { toast('已刪除'); return refreshStaff(); }).catch(function (e) { toast(e.message); busy(b, false); });
+    busy(b, true, ''); call('adminDeleteTeacher', { tok: S.tok, id: b.dataset.del }).then(function () { toast('已刪除'); return refreshStaff(); }).catch(function (e) { busy(b, false); try { console.error(e); } catch (x) {} alert('刪除失敗：' + (e && e.message || e)); });
   }; });
   $('#tlist').querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () {
     busy(b, true, ''); call('adminSetTeacher', { tok: S.tok, id: b.dataset.act, active: b.dataset.on === '1' }).then(refreshStaff).catch(function (e) { toast(e.message); busy(b, false); });
