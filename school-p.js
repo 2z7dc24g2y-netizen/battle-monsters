@@ -2,7 +2,7 @@
  * 島上答題、做實驗、蓋印章、對戰贏到的經驗，回到對戰吧時加給夥伴（每天有上限） */
 (function () {
   'use strict';
-  if (!window.HATCH_API && !window.HATCH_DEMO) return;
+  if (!window.HATCH_API && !window.HATCH_DEMO && !window.HATCH_FB) return;
   function J(k) { try { return JSON.parse(localStorage.getItem(k) || 'null') || {}; } catch (e) { return {}; } }
   function e2(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function goHatch() { try { if (parent !== window) { parent.postMessage({ t: 'phub-nav', u: 'index.html' }, '*'); return; } } catch (e) {} location.href = 'index.html'; }

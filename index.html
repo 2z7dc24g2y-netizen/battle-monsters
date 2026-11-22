@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<script src="split.js?v=1"></script><script src="config.js"></script><script src="hatch-demo.js"></script><script>window.SCI_PAGE="hatch"</script><script src="sync.js"></script>
+<script src="split.js?v=1"></script><script src="config.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script><script src="fbconfig.js"></script><script src="hatch-fb.js"></script><script>window.SCI_PAGE="hatch"</script><script src="sync.js"></script>
 </head>
 <body>
 <script>/* HANABI.JS 日本花火特效模組（由 ChatGPT 初版改寫：效能、生命週期、上升動畫）。作者：辛巴王
@@ -688,11 +688,9 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
   <section class="view" id="v-tlogin" hidden>
     <div class="card stack" style="max-width:480px;width:100%;margin:20px auto">
       <h2>老師・網管登入</h2>
-      <label class="f">帳號<input type="text" id="t-id" autocomplete="username" autocapitalize="characters" placeholder="例如 T01"></label>
-      <label class="f">PIN／密碼<input type="password" id="t-pw" autocomplete="current-password" placeholder="老師 6 碼 PIN"></label>
-      <p class="small muted" style="margin:0">老師帳號由網管開立，忘記 PIN 請找網管重設。</p>
+      <p class="small muted" style="margin:0">用你申請時填的 Google 帳號（Gmail）登入。還沒申請過的話，請先按下面的「申請老師帳號」，網管核准後才能登入。</p>
       <div class="err" id="t-err" hidden></div>
-      <button class="btn orange big" id="t-login">登入</button>
+      <button class="btn orange big" id="t-login">用 Google 帳號登入</button>
       <button class="btn ghost" id="t-apply" type="button">還沒有帳號？申請老師帳號</button>
     </div>
   </section>
@@ -706,9 +704,9 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
     <div class="card stack" id="admin-card" hidden>
       <h2 style="margin:0">老師帳號管理</h2>
       <div class="stack" id="applist" style="gap:8px"></div>
-      <p class="small muted" style="margin:0">開帳號後畫面會顯示 6 碼 PIN，只會出現這一次，請抄給老師。PIN 忘記了就按「重設 PIN」。</p>
+      <p class="small muted" style="margin:0">核准後，請自己通知老師「可以用 Google 登入了」。老師不需要密碼，也不會有忘記密碼的問題。</p>
       <div class="tlist" id="tlist"></div>
-      <div class="row"><input type="text" id="a-name" placeholder="老師姓名" maxlength="20" style="flex:1;min-width:140px"><button class="btn green" id="a-add">開新老師帳號</button></div>
+      <div class="row"><input type="text" id="a-name" placeholder="老師姓名" maxlength="20" style="flex:1;min-width:120px"><input type="email" id="a-email" placeholder="老師的 Gmail" maxlength="80" style="flex:2;min-width:160px"><button class="btn green" id="a-add">直接開通</button></div>
       <div class="err" id="a-err" hidden></div>
     </div>
     <div class="card stack" id="create-card">
@@ -809,6 +807,7 @@ var MAX_MONS = 3, EGG_LV = [0, 5, 10];
 
 /* ---------- 後端呼叫 ---------- */
 function call(action, payload) {
+  if (window.HATCH_FB) return window.fbCall(action, payload || {});
   return new Promise(function (resolve, reject) {
     var done = function (s) { var r; try { r = JSON.parse(s); } catch (e) { reject(new Error('伺服器回應無法讀取')); return; } if (r.ok) resolve(r.data); else reject(new Error(r.error)); };
     if (IS_GAS) google.script.run.withSuccessHandler(done).withFailureHandler(function (e) { reject(new Error((e && e.message) || '連線失敗，請檢查網路後再試。')); }).api(action, payload || {});
@@ -903,7 +902,7 @@ function renderHome() {
   }).join('');
   if (!IS_GAS && !window.HATCH_API && typeof DemoStore !== 'undefined') {
     var n = $('#demo-note'); n.hidden = false;
-    n.innerHTML = '<b>示範版</b>：資料只存在這台裝置。學生：班級代碼 <b>803</b>、座號 <b>1</b>（PIN <b>1234</b>，蛋快孵化了）或座號 <b>2</b>（PIN <b>2222</b>，已有 3 隻理化獸）。老師：帳號 <b>T01</b>、PIN <b>123456</b>。<button class="btn ghost sm" id="demo-reset">重設示範資料</button>';
+    n.innerHTML = '<b>示範版</b>：資料只存在這台裝置。學生：班級代碼 <b>803</b>、座號 <b>1</b>（PIN <b>1234</b>，蛋快孵化了）或座號 <b>2</b>（PIN <b>2222</b>，已有 3 隻理化獸）。老師：帳號 <b>T01</b>、PIN <b>123456</b>。網管：帳號 <b>admin</b>。 <button class="btn ghost sm" id="demo-reset">重設示範資料</button>';
     $('#demo-reset').onclick = function () { DemoStore.reset(); toast('示範資料已重設'); };
   }
 }
@@ -911,10 +910,8 @@ function renderHome() {
 /* ---------- 老師 ---------- */
 $('#go-teacher').onclick = function () {
   if (!S.tok) S.tok = sstore('tok') || '';
-  if (S.tok) teacherHome(true); else { show('v-tlogin'); setTimeout(function () { $('#t-id').focus(); }, 50); }
+  if (S.tok) teacherHome(true); else { show('v-tlogin'); }
 };
-$('#t-pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('#t-login').click(); });
-$('#t-id').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('#t-pw').focus(); });
 function staffIn(d) {
   S.tok = d.tok; S.role = d.role; S.staff = { id: d.id, name: d.name }; sstore('tok', d.tok);
   if (d.teachers) S.teachers = d.teachers; if (d.apps) S.apps = d.apps;
@@ -923,7 +920,7 @@ function staffIn(d) {
 $('#t-login').onclick = function () {
   var b = this; showErr('#t-err');
   busy(b, true, '登入中');
-  call('teacherLogin', { id: $('#t-id').value, pw: $('#t-pw').value }).then(function (d) { $('#t-pw').value = ''; staffIn(d); })
+  call('teacherLogin', {}).then(staffIn)
     .catch(function (e) { showErr('#t-err', e); }).then(function () { busy(b, false); });
 };
 function teacherHome(quiet) {
@@ -942,6 +939,11 @@ $('#t-chpin').onclick = function () {
       .catch(function (e) { showErr('#cp-err', e); }).then(function () { busy(b, false); });
   };
 };
+function showOk(r) {
+  openOv('<div class="ov-head"><h2>已核准</h2><button class="x" aria-label="關閉">×</button></div>' +
+    '<div class="pinshow"><div><span class="small muted">老師</span><b>' + esc(r.name) + '</b></div><div><span class="small muted">Google 帳號</span><b>' + esc(r.email) + '</b></div></div>' +
+    '<p class="small" style="margin:0">請自己通知這位老師：現在可以用這個 Google 帳號登入了。系統不會自動寄信。</p>');
+}
 function showPin(r, title) {
   openOv('<div class="ov-head"><h2>' + esc(title) + '</h2><button class="x" aria-label="關閉">×</button></div>' +
     '<div class="pinshow"><div><span class="small muted">帳號</span><b class="num">' + esc(r.id) + '</b></div><div><span class="small muted">PIN</span><b class="num">' + esc(r.pin) + '</b></div></div>' +
@@ -952,15 +954,15 @@ function refreshStaff() { return call('teacherLogin', { tok: S.tok }).then(funct
 /* 老師申請帳號（登入頁） */
 $('#t-apply').onclick = function () {
   openOv('<div class="ov-head"><h2>申請老師帳號</h2><button class="x" aria-label="關閉">×</button></div>' +
-    '<p class="small muted" style="margin:0">填好送出後，網管核准就會把帳號和 PIN 寄到你的 Email。</p>' +
+    '<p class="small muted" style="margin:0">填好送出後，網管核准，你就可以用這個 Google 帳號登入。系統不會自動寄信，網管會另外通知你。</p>' +
     '<div class="grid2"><label class="f">姓名<input type="text" id="ap-name" maxlength="20" autocomplete="name"></label><label class="f">學校<input type="text" id="ap-school" maxlength="30" placeholder="例如：某某國中"></label></div>' +
-    '<label class="f">Email<input type="email" id="ap-email" maxlength="80" autocomplete="email"></label>' +
+    '<label class="f">Google 帳號（Gmail）<input type="email" id="ap-email" maxlength="80" autocomplete="email"></label>' +
     '<label class="f">想說的話（選填）<input type="text" id="ap-note" maxlength="200" placeholder="例如：任教八年級理化，想帶兩個班使用"></label>' +
     '<div class="err" id="ap-err" hidden></div><div><button class="btn orange big" id="ap-go">送出申請</button></div>');
   $('#ap-go').onclick = function () {
     var b = this; showErr('#ap-err'); busy(b, true, '送出中');
     call('teacherApply', { name: $('#ap-name').value, school: $('#ap-school').value, email: $('#ap-email').value, note: $('#ap-note').value })
-      .then(function () { closeOv(); toast('申請已送出，網管核准後會寄 Email 給你'); })
+      .then(function () { closeOv(); toast('申請已送出，網管核准後會通知你'); })
       .catch(function (e) { showErr('#ap-err', e); busy(b, false); });
   };
 };
@@ -972,7 +974,7 @@ function renderApps() {
   }).join('') : '';
   el.querySelectorAll('[data-ok]').forEach(function (b) { b.onclick = function () {
     busy(b, true, ''); call('adminApprove', { tok: S.tok, id: b.dataset.ok, url: location.href.split('#')[0] }).then(function (r) {
-      S.apps = r.apps; showPin(r, r.mailed ? '已開通，帳號已寄到 ' + r.email : '已開通（Email 沒寄出，請自己轉告）'); return refreshStaff();
+      S.apps = r.apps; showOk(r); return refreshStaff();
     }).catch(function (e) { toast(e.message); busy(b, false); });
   }; });
   el.querySelectorAll('[data-no]').forEach(function (b) { b.onclick = function () {
@@ -985,8 +987,8 @@ function renderTeachers() {
   renderApps();
   var list = S.teachers || [];
   $('#tlist').innerHTML = list.length ? list.map(function (t) {
-    return '<div class="trow' + (t.active ? '' : ' off') + '"><b class="num">' + esc(t.id) + '</b><span>' + esc(t.name) + '</span><span class="small muted">' + t.classes + ' 班' + (t.active ? '' : '・已停用') + '</span>' +
-      '<button class="btn ghost sm" data-reset="' + esc(t.id) + '">重設 PIN</button><button class="btn ghost sm" data-act="' + esc(t.id) + '" data-on="' + (t.active ? 0 : 1) + '">' + (t.active ? '停用' : '啟用') + '</button></div>';
+    return '<div class="trow' + (t.active ? '' : ' off') + '"><span><b>' + esc(t.name) + '</b><br><span class="small muted">' + esc(t.email || t.id) + '</span></span><span class="small muted">' + t.classes + ' 班' + (t.active ? '' : '・已停用') + '</span>' +
+      '<button class="btn ghost sm" data-act="' + esc(t.id) + '" data-on="' + (t.active ? 0 : 1) + '">' + (t.active ? '停用' : '啟用') + '</button></div>';
   }).join('') : '<p class="muted small" style="margin:0">還沒有老師帳號。</p>';
   $('#tlist').querySelectorAll('[data-reset]').forEach(function (b) { b.onclick = function () {
     /* 按第一次先變成「再按一次確定」，避免誤觸（瀏覽器的確認小視窗在某些環境會被擋掉） */
@@ -1000,7 +1002,7 @@ function renderTeachers() {
 }
 $('#a-add').onclick = function () {
   var b = this; showErr('#a-err'); busy(b, true, '開立中');
-  call('adminAddTeacher', { tok: S.tok, name: $('#a-name').value }).then(function (r) { $('#a-name').value = ''; showPin(r, '新的老師帳號'); return refreshStaff(); })
+  call('adminAddTeacher', { tok: S.tok, name: $('#a-name').value, email: $('#a-email').value }).then(function (r) { $('#a-name').value = ''; $('#a-email').value = ''; showOk(r); return refreshStaff(); })
     .catch(function (e) { showErr('#a-err', e); }).then(function () { busy(b, false); });
 };
 function loadBank(cb) {
@@ -1016,10 +1018,10 @@ function renderScopeChips() {
 }
 function renderClasses(list) {
   var el = $('#classlist'), adm = S.role === 'admin';
-  $('#cl-title').textContent = adm ? '全校班級' : '我的班級'; $('#t-chpin').hidden = S.role !== 'teacher';
+  $('#cl-title').textContent = adm ? '全校班級' : '我的班級'; $('#t-chpin').hidden = true;
   renderTeachers(); $('#create-card').hidden = adm;
   if (!list.length) { el.innerHTML = '<p class="muted">' + (adm ? '還沒有班級。請老師用自己的帳號登入後建立班級，再到這裡指派導師。' : '還沒有班級。在下方建立第一個班級，學生就能領到怪獸蛋。') + '</p>'; return; }
-  var opts = function (c) { return '<option value="">（未指派）</option>' + (S.teachers || []).map(function (t) { return '<option value="' + esc(t.id) + '"' + (t.id === c.owner ? ' selected' : '') + '>' + esc(t.id + ' ' + t.name) + '</option>'; }).join(''); };
+  var opts = function (c) { return '<option value="">（未指派）</option>' + (S.teachers || []).map(function (t) { return '<option value="' + esc(t.id) + '"' + (t.id === c.owner ? ' selected' : '') + '>' + esc(t.name + (t.email ? '（' + t.email + '）' : '')) + '</option>'; }).join(''); };
   el.innerHTML = list.map(function (c) {
     return '<div class="clwrap"><button data-code="' + esc(c.code) + '"><b>' + esc(c.name) + '</b><span class="small muted">代碼 <span class="num">' + esc(c.code) + '</span>・' + c.count + ' 人' + (adm ? '・' + (c.ownerName ? esc(c.ownerName) + ' 老師' : '未指派') : '') + '</span>' +
       '<span class="small">已孵化 <b class="num">' + c.hatched + '</b>／' + c.count + '・今日完成訓練 <b class="num">' + c.doneToday + '</b> 人</span></button>' +

@@ -6,7 +6,7 @@
 (function () {
   'use strict';
   var API = window.HATCH_API;
-  var LOCAL = !API && window.HATCH_DEMO && typeof window.runApi_ === 'function' && window.DemoStore;
+  var LOCAL = (!API && window.HATCH_DEMO && typeof window.runApi_ === 'function' && window.DemoStore) || !!window.HATCH_FB;
   var AK = 'sciHatch.auth', OK = 'sciHatch.owner', SK = 'sciHatch.sent';
   var SKIP = /^sciIsles\.(sound|sideMin|season|tod|lastIsle|lastBackup|P\.snd)$/;
   var ISLE = /^sciIsles\.([A-OQ-Z]\.)?v1$/;
@@ -20,6 +20,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   function call(action, payload, keep) {
+    if (window.HATCH_FB && window.fbCall) return window.fbCall(action, payload);
     if (LOCAL) return new Promise(function (ok, no) { setTimeout(function () { var r = JSON.parse(window.runApi_(window.DemoStore, action, payload)); if (r.ok) ok(r.data); else no(new Error(r.error)); }, 120); });
     if (!API) return Promise.reject(new Error('還沒設定伺服器網址（config.js）'));
     return fetch(API, { method: 'POST', keepalive: !!keep, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: action, payload: payload }) })

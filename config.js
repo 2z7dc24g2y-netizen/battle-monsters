@@ -1,3 +1,3 @@
-/* 試玩版：資料存在這個瀏覽器 */
+/* Firebase 版 */
 window.HATCH_API = '';
-window.HATCH_DEMO = true;
+window.HATCH_FB_MODE = true;
