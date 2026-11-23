@@ -132,19 +132,19 @@ function buildWorld(){
 /* ---------- 世界物件 ---------- */
 var HOUSE={x:70,y:0},FOOD={x:190,y:0},WATER={x:222,y:0},TREE={x:350,y:0},XTREE={x:455,y:0},LAMP={x:150,y:0};
 function placeObjs(){var mid=Math.round((yMin+yMax)/2);HOUSE.y=yMin+10;FOOD.y=mid+6;WATER.y=mid+6;TREE.y=yMin+6;XTREE.y=yMin+12;LAMP.y=yMin+4;
-  FOOD.x=Math.round(WW*0.38);WATER.x=FOOD.x+34;HOUSE.x=70;TREE.x=Math.round(WW*0.66);XTREE.x=WW-60;LAMP.x=Math.round(WW*0.3)}
+  FOOD.x=Math.round(WW*0.38);WATER.x=FOOD.x+34;HOUSE.x=Math.round(30*HK)+44;TREE.x=Math.round(WW*0.66);XTREE.x=WW-60;LAMP.x=Math.round(WW*0.3)}
 
+var HK=1.6;   // 狗屋放大倍數
 function drawHouse(c,ox,night){var x=HOUSE.x-ox,y=HOUSE.y;
-  px(c,x-20,y-20,40,20,'#c98b4e');for(var i=0;i<5;i++)px(c,x-20,y-20+i*4,40,1,'#a8703a');px(c,x-20,y-20,2,20,'#b37a40');px(c,x+18,y-20,2,20,'#a36a34');
+  function P(a,b,w,h,col){var x0=Math.round(x+a*HK),y0=Math.round(y+b*HK),x1=Math.round(x+(a+w)*HK),y1=Math.round(y+(b+h)*HK);px(c,x0,y0,Math.max(1,x1-x0),Math.max(1,y1-y0),col)}
+  P(-20,-20,40,20,'#c98b4e');for(var i=0;i<5;i++)P(-20,-20+i*4,40,1,'#a8703a');P(-20,-20,2,20,'#b37a40');P(18,-20,2,20,'#a36a34');
   // 門
-  px(c,x-7,y-14,14,14,'#2d1f14');px(c,x-6,y-16,12,2,'#2d1f14');px(c,x-4,y-18,8,2,'#2d1f14');
-  if(night){px(c,x-5,y-12,10,12,'#ffcf6b');px(c,x-6,y-14,12,2,'#ffcf6b');px(c,x-4,y-16,8,2,'#ffcf6b');px(c,x-5,y-12,10,1,'#ffe39a')}
+  P(-7,-14,14,14,'#2d1f14');P(-6,-16,12,2,'#2d1f14');P(-4,-18,8,2,'#2d1f14');
+  if(night){P(-5,-12,10,12,'#ffcf6b');P(-6,-14,12,2,'#ffcf6b');P(-4,-16,8,2,'#ffcf6b');P(-5,-12,10,1,'#ffe39a')}
   // 屋頂
-  for(var r=0;r<12;r++){px(c,x-26+r,y-21-r,52-2*r,1,r<2?'#8a2f2a':'#b5403a')}
-  px(c,x-26,y-21,52,1,'#6e211e');
-  if(st.hat&&xmasSeason){for(var r2=0;r2<4;r2++)px(c,x-20+r2*2,y-33+r2-1,40-r2*4,1,'#ffffff');px(c,x-8,y-30,4,1,'#eaf3fb')}
-  // 骨頭牌
-  px(c,x-4,y-8,0,0,'#fff');
+  for(var r=0;r<12;r++){P(-26+r,-21-r,52-2*r,1,r<2?'#8a2f2a':'#b5403a')}
+  P(-26,-21,52,1,'#6e211e');
+  if(st.hat&&xmasSeason){for(var r2=0;r2<4;r2++)P(-20+r2*2,-33+r2-1,40-r2*4,1,'#ffffff');P(-8,-30,4,1,'#eaf3fb')}
 }
 function drawBowl(c,b,ox,kind){var x=Math.round(b.x-ox),y=b.y;var amt=kind==='food'?st.foodBowl:st.waterBowl;
   px(c,x-8,y-4,16,5,kind==='food'?'#c24a3c':'#3a7bd5');px(c,x-9,y-5,18,2,kind==='food'?'#e0675a':'#5b9bf0');px(c,x-6,y,12,2,kind==='food'?'#9c342a':'#2a5fb0');
@@ -232,7 +232,7 @@ function toast(t){toasts.push({t:t,life:2.4});var e=document.getElementById('toa
 
 /* ---------- 行為 ---------- */
 function busy(){return dog.state==='act'||dog.state==='sleep'}
-function goTo(x,y,run,then){dog.goal={x:clamp(x,16,WW-16),y:clamp(y,yMin,yMax),then:then||null};dog.state='move';dog.run=!!run;dog.sitT=0;dog.act=null;if(dog.sleeping){dog.sleeping=false}}
+function goTo(x,y,run,then){dog.chase=false;dog.goal={x:clamp(x,16,WW-16),y:clamp(y,yMin,yMax),then:then||null};dog.state='move';dog.run=!!run;dog.sitT=0;dog.act=null;if(dog.sleeping){dog.sleeping=false}}
 function doAct(name,dur,tick,end){dog.state='act';dog.act={name:name,t:0,dur:dur,tick:tick||null,end:end||null,n:0};dog.goal=null}
 function endAct(){var a=dog.act;dog.act=null;dog.state='idle';dog.idleT=0;if(a&&a.end)a.end()}
 function face(x){if(Math.abs(x-dog.x)>1)dog.face=x>dog.x?1:-1}
@@ -251,7 +251,8 @@ function drinkAt(){
 }
 function sleepNow(){
   if(dog.state==='sleep'){wake();return}
-  goTo(HOUSE.x+34,HOUSE.y+8,false,function(){dog.face=-1;doAct('lie',2,null,function(){dog.state='sleep';dog.sleeping=true;dog.sleepT=0;SFX.yawn()});});
+  if(dog.carry)dropBall();
+  goTo(HOUSE.x+Math.round(34*HK),HOUSE.y+8,false,function(){dog.face=-1;doAct('lie',2,null,function(){dog.state='sleep';dog.sleeping=true;dog.sleepT=0;SFX.yawn()});});
 }
 function wake(){dog.sleeping=false;dog.state='idle';dog.idleT=0;toast('辛巴醒了');doAct('sit',1.4,null,null);SFX.yawn()}
 function pet(wx,wy){
@@ -277,6 +278,8 @@ function trick(name){
 function pourFood(){st.foodBowl=1;SFX.pour();for(var i=0;i<10;i++)spawn({x:FOOD.x+rnd(-3,3),y:FOOD.y-26-i*2,vx:0,vy:rnd(40,70),life:.4,t:0,kind:'dot',col:'#8a5628'});toast('飼料倒好了');if(st.food<70&&!busy())setTimeout(function(){if(!busy())eatAt()},500)}
 function pourWater(){st.waterBowl=1;SFX.splash();for(var i=0;i<10;i++)spawn({x:WATER.x+rnd(-3,3),y:WATER.y-26-i*2,vx:0,vy:rnd(40,70),life:.4,t:0,kind:'dot',col:'#8fd3ff'});toast('水加滿了');if(st.water<70&&!busy())setTimeout(function(){if(!busy())drinkAt()},500)}
 function throwBall(tx,ty){
+  if(dog.carry||ball.state==='carried'){dog.carry=false;if(dog.state==='move'){dog.goal=null;dog.state='idle';dog.idleT=0}}
+  dog.chase=false;
   var sx=clamp(dog.x+(dog.face*30),20,WW-20);ball.x=sx;ball.y=clamp(dog.y+4,yMin,yMax);ball.z=14;
   tx=clamp(tx,20,WW-20);ty=clamp(ty,yMin,yMax);var T=.85,gr=120;
   ball.vx=(tx-ball.x)/T;ball.vy=(ty-ball.y)/T;ball.vz=(0.5*gr*T*T-ball.z)/T;ball.state='air';SFX.pop();
@@ -289,6 +292,7 @@ function giveTreat(){
 }
 
 function ballInterest(){return ball.state==='air'||ball.state==='ground'}
+function dropBall(){ball.state='rest';ball.x=clamp(dog.x+dog.face*26,6,WW-6);ball.y=clamp(dog.y+3,yMin-4,yMax+6);ball.z=0;ball.vx=ball.vy=ball.vz=0;dog.carry=false}
 function updateDog(dt){
   // 動作中
   if(dog.petT>0)dog.petT-=dt;
@@ -307,6 +311,7 @@ function updateDog(dt){
     return}
   // idle
   dog.idleT+=dt;st.food=clamp(st.food-dt*0.022,0,100);
+  if(dog.carry&&dog.idleT>.5)dropBall();   // 被打斷時不要一直叼著球
   if(dog.idleT>.6&&ballInterest()&&ball.state!=='carried'&&st.energy>8){dog.chase=true;chaseBall();return}
   if(dog.idleT>1.5){
     var h=hourNow(),night=nightAmt(h);
@@ -330,7 +335,7 @@ function chaseBall(){
   goTo(ball.x,ball.y,true,function(){
     if(ball.state==='ground'||ball.state==='air'&&ball.z<10){ball.state='carried';dog.carry=true;SFX.pop();
       var ox=clamp(camX+W/2,40,WW-40),oy=yMax-6;goTo(ox-26,oy,false,function(){dog.face=1;
-        doAct('bark',.9,function(a){if(!a.p){a.p=1;ball.state='ground';ball.x=dog.x+dog.face*26;ball.y=dog.y+3;ball.z=0;ball.vx=ball.vy=ball.vz=0;dog.carry=false;SFX.woof()}},function(){fun(8);st.energy=clamp(st.energy-4,0,100);bondGain(1.5);heart(dog.x,dog.y-30)})})}
+        doAct('bark',.9,function(a){if(!a.p){a.p=1;dropBall();SFX.woof()}},function(){fun(8);st.energy=clamp(st.energy-4,0,100);bondGain(1.5);heart(dog.x,dog.y-30)})})}
     else if(ball.state!=='none'){chaseBall()}
   });dog.chase=true;
 }
@@ -463,7 +468,7 @@ function render(){
   // 燈光
   if(night>.3){g.globalCompositeOperation='lighter';
     glow(LAMP.x-camX,LAMP.y-40,34,'255,214,120',.35*night);
-    glow(HOUSE.x-camX,HOUSE.y-8,24,'255,200,110',.28*night);
+    glow(HOUSE.x-camX,HOUSE.y-8*HK,Math.round(24*HK),'255,200,110',.28*night);
     if(xmasSeason)glow(XTREE.x-camX,XTREE.y-30,36,'255,180,120',.2*night);
     g.globalCompositeOperation='source-over'}
   // 雪
@@ -501,11 +506,11 @@ var down=null,lastTapT=0,lastTapX=0;
 cv.addEventListener('pointerdown',function(e){
   e.preventDefault();ac();var p=toWorld(e);down={x:p.x,y:p.y,t:performance.now(),moved:false};
   // 球
-  if(ball.state==='ground'&&Math.abs(p.x-ball.x)<9&&Math.abs(p.y-(ball.y-3))<9){throwBall(clamp(camX+rnd(W*.1,W*.9),20,WW-20),rnd(yMin,yMax));down=null;return}
+  if((ball.state==='ground'||ball.state==='rest')&&Math.abs(p.x-ball.x)<12&&Math.abs(p.y-(ball.y-3))<9){throwBall(clamp(camX+rnd(W*.1,W*.9),20,WW-20),rnd(yMin,yMax));down=null;return}
   // 狗
   if(Math.abs(p.x-dog.x)<24&&p.y>dog.y-34&&p.y<dog.y+6){pet(p.x,p.y);down=null;return}
   // 屋
-  if(Math.abs(p.x-HOUSE.x)<28&&p.y>HOUSE.y-34&&p.y<HOUSE.y+4){sleepNow();down=null;return}
+  if(Math.abs(p.x-HOUSE.x)<Math.round(28*HK)&&p.y>HOUSE.y-Math.round(34*HK)&&p.y<HOUSE.y+4){sleepNow();down=null;return}
   if(Math.abs(p.x-FOOD.x)<12&&Math.abs(p.y-FOOD.y)<12){eatAt();down=null;return}
   if(Math.abs(p.x-WATER.x)<12&&Math.abs(p.y-WATER.y)<12){drinkAt();down=null;return}
   moveTo(p,performance.now()-lastTapT<350&&Math.abs(p.x-lastTapX)<20);lastTapT=performance.now();lastTapX=p.x;
