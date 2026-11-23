@@ -190,24 +190,39 @@ function dust(x,y){spawn({x:x,y:y,vx:rnd(-8,8)-dog.face*6,vy:rnd(-8,-2),life:.5,
 function zzz(x,y){spawn({x:x,y:y,vx:3,vy:-8,life:2,t:0,kind:'z'})}
 
 /* ---------- 音效 ---------- */
-var AC=null;
-function ac(){if(!st.sound)return null;if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
-function tone(f0,f1,dur,type,vol,delay){var a=ac();if(!a)return;var t=a.currentTime+(delay||0),o=a.createOscillator(),gn=a.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur);gn.gain.setValueAtTime(0.0001,t);gn.gain.exponentialRampToValueAtTime(vol||.12,t+0.01);gn.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(gn).connect(a.destination);o.start(t);o.stop(t+dur+.02)}
-function noise(dur,vol,fq,delay){var a=ac();if(!a)return;var t=a.currentTime+(delay||0),n=Math.floor(a.sampleRate*dur),b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);for(var i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);var s=a.createBufferSource();s.buffer=b;var f=a.createBiquadFilter();f.type='bandpass';f.frequency.value=fq||1800;var gn=a.createGain();gn.gain.value=vol||.2;s.connect(f).connect(gn).connect(a.destination);s.start(t)}
+var AC=null,MASTER=null;
+function ac(){if(!st.sound)return null;if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();
+  var comp=AC.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=4;MASTER=AC.createGain();MASTER.gain.value=0.45;
+  var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5000;MASTER.connect(lp).connect(comp).connect(AC.destination)}catch(e){}}
+  if(AC&&AC.state==='suspended')AC.resume();return AC}
+function env(g,t,a,peak,d){g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(0.0001,t+a+d)}
+function tone(f0,f1,dur,type,vol,delay){var a=ac();if(!a)return;var t=a.currentTime+(delay||0),o=a.createOscillator(),gn=a.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur);env(gn,t,0.012,vol||.05,dur);o.connect(gn).connect(MASTER);o.start(t);o.stop(t+dur+.05)}
+var NB=null;function nbuf(a){if(!NB){var n=a.sampleRate;NB=a.createBuffer(1,n,n);var d=NB.getChannelData(0);for(var i=0;i<n;i++)d[i]=Math.random()*2-1}return NB}
+function noise(dur,vol,fq,delay,type,q){var a=ac();if(!a)return;var t=a.currentTime+(delay||0),s=a.createBufferSource();s.buffer=nbuf(a);var f=a.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=fq||1500;f.Q.value=q||1;var gn=a.createGain();env(gn,t,0.004,vol||.05,dur);s.connect(f).connect(gn).connect(MASTER);s.start(t,Math.random()*.5);s.stop(t+dur+.05)}
+/* 狗叫：鋸齒波經過兩個共振峰（模擬口腔），加一點氣音，音高快速下滑 */
+function barkOnce(delay,pitch,vol){var a=ac();if(!a)return;var t=a.currentTime+(delay||0);
+  var o=a.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(pitch*1.25,t);o.frequency.exponentialRampToValueAtTime(pitch,t+.03);o.frequency.exponentialRampToValueAtTime(pitch*.6,t+.16);
+  var f1=a.createBiquadFilter();f1.type='bandpass';f1.frequency.setValueAtTime(700,t);f1.frequency.exponentialRampToValueAtTime(450,t+.15);f1.Q.value=3;
+  var f2=a.createBiquadFilter();f2.type='bandpass';f2.frequency.value=1500;f2.Q.value=4;
+  var g1=a.createGain(),g2=a.createGain(),out=a.createGain();g1.gain.value=1;g2.gain.value=.45;
+  env(out,t,0.006,vol,0.17);
+  o.connect(f1).connect(g1).connect(out);o.connect(f2).connect(g2).connect(out);out.connect(MASTER);o.start(t);o.stop(t+.25);
+  noise(.08,vol*.35,900,delay,'bandpass',1.5)}
+var lastS={};function rate(k,ms){var n=performance.now();if(lastS[k]&&n-lastS[k]<ms)return false;lastS[k]=n;return true}
 var SFX={
-  bark:function(){tone(420,170,.14,'sawtooth',.11);noise(.1,.12,900);tone(380,160,.14,'sawtooth',.1,.2);noise(.1,.1,900,.2)},
-  woof:function(){tone(300,140,.2,'sawtooth',.09);noise(.12,.08,700)},
-  crunch:function(){noise(.05,.35,2600);noise(.05,.3,2200,.07)},
-  lap:function(){tone(760,520,.06,'sine',.07);tone(820,560,.06,'sine',.06,.09)},
-  pop:function(){tone(520,780,.07,'triangle',.1)},
-  heart:function(){tone(660,990,.12,'sine',.08)},
-  bounce:function(v){tone(160,70,.09,'sine',.14*(v||1))},
-  whine:function(){tone(620,430,.5,'sine',.06)},
-  ding:function(){[660,880,1100,1320].forEach(function(f,i){tone(f,f,.18,'triangle',.09,i*.09)})},
-  pour:function(){noise(.35,.14,3200)},
-  splash:function(){noise(.3,.12,1400);tone(500,300,.2,'sine',.05)},
-  yawn:function(){tone(300,180,.5,'sine',.06)},
-  pant:function(){noise(.12,.04,3000)}
+  bark:function(){if(!rate('bark',300))return;barkOnce(0,300,.5);barkOnce(.2,270,.42)},
+  woof:function(){if(!rate('woof',600))return;barkOnce(0,240,.3)},
+  crunch:function(){if(!rate('crunch',350)||Math.random()<.35)return;noise(.03,.05,3000,0,'highpass',.7);noise(.025,.04,2400,.05,'highpass',.7)},
+  lap:function(){if(!rate('lap',300))return;noise(.05,.05,700,0,'lowpass',1);tone(320,200,.05,'sine',.025)},
+  pop:function(){tone(500,760,.06,'sine',.035)},
+  heart:function(){if(!rate('heart',250))return;tone(880,1320,.09,'sine',.025)},
+  bounce:function(v){if(!rate('bounce',120))return;tone(150,80,.07,'sine',.05*(v||1))},
+  whine:function(){var a=ac();if(!a)return;var t=a.currentTime,o=a.createOscillator(),l=a.createOscillator(),lg=a.createGain(),g=a.createGain();o.type='sine';o.frequency.setValueAtTime(950,t);o.frequency.linearRampToValueAtTime(780,t+.6);l.frequency.value=7;lg.gain.value=18;l.connect(lg).connect(o.frequency);env(g,t,.05,.03,.6);o.connect(g).connect(MASTER);o.start(t);l.start(t);o.stop(t+.7);l.stop(t+.7)},
+  ding:function(){[784,988,1175].forEach(function(f,i){tone(f,f,.25,'sine',.035,i*.1)})},
+  pour:function(){noise(.3,.04,2200,0,'lowpass',.7)},
+  splash:function(){noise(.22,.04,1200,0,'lowpass',.7)},
+  yawn:function(){tone(420,230,.6,'sine',.025)},
+  pant:function(){}
 };
 
 /* ---------- 需求與成長 ---------- */
@@ -257,7 +272,7 @@ function trick(name){
   if(name==='belly'){bellyUp()}
   if(name==='shake'){doAct('shake',3,function(a){if(a.t>.5&&!a.p){a.p=1;heart(dog.x+dog.face*14,dog.y-28)}},function(){fun(4);bondGain(1.2)})}
   if(name==='bow'){doAct('bow',2.4,null,function(){fun(4);bondGain(1.2)})}
-  if(name==='bark'){doAct('bark',1.4,function(a,dt){a.n+=dt;if(a.n>.45){a.n=0;SFX.bark();spawn({x:dog.x+dog.face*20,y:dog.y-28,vx:dog.face*14,vy:-3,life:.7,t:0,kind:'wave'})}},function(){fun(3);bondGain(.8)})}
+  if(name==='bark'){doAct('bark',1.2,function(a,dt){if(!a.p&&a.t>.1){a.p=1;SFX.bark();spawn({x:dog.x+dog.face*20,y:dog.y-28,vx:dog.face*14,vy:-3,life:.7,t:0,kind:'wave'})}},function(){fun(3);bondGain(.8)})}
 }
 function pourFood(){st.foodBowl=1;SFX.pour();for(var i=0;i<10;i++)spawn({x:FOOD.x+rnd(-3,3),y:FOOD.y-26-i*2,vx:0,vy:rnd(40,70),life:.4,t:0,kind:'dot',col:'#8a5628'});toast('飼料倒好了');if(st.food<70&&!busy())setTimeout(function(){if(!busy())eatAt()},500)}
 function pourWater(){st.waterBowl=1;SFX.splash();for(var i=0;i<10;i++)spawn({x:WATER.x+rnd(-3,3),y:WATER.y-26-i*2,vx:0,vy:rnd(40,70),life:.4,t:0,kind:'dot',col:'#8fd3ff'});toast('水加滿了');if(st.water<70&&!busy())setTimeout(function(){if(!busy())drinkAt()},500)}
@@ -307,7 +322,7 @@ function updateDog(dt){
     if(r<.38){dog.pose='stand';goTo(dog.x+rnd(-90,90),dog.y+rnd(-26,26),false)}
     else if(r<.6){dog.sitT=1;doAct('sit',rnd(4,9),null,null)}
     else if(r<.8){doAct('eat',rnd(1.4,2.4),function(a,dt){a.n+=dt;if(a.n>.6){a.n=0}},null)}
-    else if(r<.9&&st.fun<80){doAct('bark',1,function(a,dt){a.n+=dt;if(a.n>.45){a.n=0;SFX.woof()}},null)}
+    else if(r<.9&&st.fun<80){doAct('sit',rnd(3,6),null,null)}
     else{doAct('lie',rnd(5,10),null,null)}
     dog.idleT=0}
 }
