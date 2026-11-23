@@ -301,9 +301,11 @@ function updateDog(dt){
     if(st.energy>=100&&nightAmt(hourNow())<.3){wake()}return}
   if(dog.state==='move'&&dog.goal){
     var gx=dog.goal.x,gy=dog.goal.y;
-    if(dog.chase){gx=ball.x;gy=ball.y;if(ball.state==='carried'){}}
+    if(dog.chase){gx=clamp(ball.x,12,WW-12);gy=clamp(ball.y,yMin,yMax)}
     var dx=gx-dog.x,dy=gy-dog.y,d=Math.hypot(dx,dy);
-    var sp=dog.run?64:24;if(d<1.5||(d<sp*dt)){dog.x=gx;dog.y=gy;var th=dog.goal.then;dog.goal=null;dog.state='idle';dog.idleT=0;dog.chase=false;if(th)th();return}
+    // 卡在邊界走不動（不是目標在跑）就當作到了，避免原地一直跑
+    if(dog.lpx!=null&&Math.hypot(dog.x-dog.lpx,dog.y-dog.lpy)<.05)dog.stuckT=(dog.stuckT||0)+dt;else dog.stuckT=0;dog.lpx=dog.x;dog.lpy=dog.y;
+    var sp=dog.run?64:24;if(d<1.5||(d<sp*dt)||dog.stuckT>.5){dog.stuckT=0;dog.lpx=null;dog.x=gx;dog.y=gy;var th=dog.goal.then;dog.goal=null;dog.state='idle';dog.idleT=0;dog.chase=false;if(th)th();return}
     if(Math.abs(dx)>2)dog.face=dx>0?1:-1;
     dog.x+=dx/d*sp*dt;dog.y+=dy/d*sp*dt;dog.stride+=sp*dt;
     if(dog.run){st.energy=clamp(st.energy-dt*.35,0,100);if(Math.random()<dt*9)dust(dog.x-dog.face*12,dog.y)}
