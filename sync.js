@@ -137,6 +137,77 @@
     document.body.appendChild(c);
   }
 
+  /* ---------- 課堂任務限制 ----------
+   * 老師的「本節任務」選了主題島時，任務時間內學生只能逛指定的島和理化獸競技島（P、P-hub、P-battle）。
+   * 從航海圖、島上的連結過去都會擋；直接打開別的島，畫面會被蓋住，只能選要去哪裡。時間到自動解除。
+   * 老師沒開任務（或任務不是參觀科學島）就不限制。任務資料存一份在這台裝置，頁面一打開就能判斷。 */
+  var MK = 'sciHatch.mis';
+  function pageIsle(href) {
+    var f = String(href || '').split('#')[0].split('?')[0].split('/').pop();
+    var m = /^([A-Z])(p|-[a-z]+)?\.html$/.exec(f); return m ? m[1] : '';
+  }
+  function misGet() {
+    try { var m = JSON.parse(ls(MK) || 'null'); return m && m.ends > Date.now() && m.isles && m.isles.length ? m : null; } catch (e) { return null; }
+  }
+  function setMission(m) {
+    if (m && m.type === 'isle' && m.ends > Date.now()) {
+      var isles = [], nm = {};
+      (m.targets || [{ isle: m.isle, name: m.where || '' }]).forEach(function (t) {
+        if (!t.isle) return; if (isles.indexOf(t.isle) < 0) isles.push(t.isle);
+        if (!nm[t.isle]) nm[t.isle] = String(t.name || '').split(/[・（]/)[0];
+      });
+      ls(MK, isles.length ? JSON.stringify({ id: m.id, title: m.title || '', ends: m.ends, isles: isles, nm: nm }) : null);
+    } else ls(MK, null);
+    guard();
+  }
+  function isleNm(L, m) { if (L === 'P') return '理化獸競技島'; var c = window.ISLE_CAT && window.ISLE_CAT[L]; return (c && c.n) || (m && m.nm && m.nm[L]) || (L + ' 島'); }
+  function okIsle(L, m) { return !L || L === 'P' || m.isles.indexOf(L) >= 0; }
+  function okList(m) { return m.isles.map(function (L) { return isleNm(L, m); }).concat(['理化獸競技島']).join('、'); }
+  function left(m) { var s = Math.max(0, Math.round((m.ends - Date.now()) / 1000)); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
+  var GCSS = '.shx-lock{inset:0;z-index:9500;background:rgba(20,16,14,.78);display:grid;place-items:center;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}' +
+    '.shx-lock .shx-box{width:min(100%,400px)}.shx-lock .lst{display:flex;flex-direction:column;gap:8px}.shx-lock .lst a{all:unset;cursor:pointer;text-align:center;font-weight:800;font-size:16px;padding:12px;border-radius:14px;background:#e08a2e;color:#fff}' +
+    '.shx-lock .lst a.p{background:#3f9a55}.shx-lock .lst a.m{background:#efe6d8;color:#3b302a}.shx-lock .lst a:focus-visible{outline:3px solid #47a3f0}.shx-lock .clk{font-variant-numeric:tabular-nums;color:#e08a2e}' +
+    '.shx-ban{top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:#3b302a;color:#fff;border-radius:14px;padding:8px 14px;max-width:min(94vw,560px);text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.25);font-size:13.5px}' +
+    '.shx-ban .clk{font-variant-numeric:tabular-nums;color:#ffcf6b;margin-left:6px}';
+  function gstyle() { style(); if (document.getElementById('shx-gcss')) return; var t = document.createElement('style'); t.id = 'shx-gcss'; t.textContent = GCSS; document.head.appendChild(t); }
+  function drop(id) { var e = document.getElementById(id); if (e) e.remove(); }
+  function guard() {
+    clearTimeout(guard.t); clearInterval(guard.k);
+    var m = misGet(), L = pageIsle(location.pathname);
+    if (page === 'hatch' || inFrame || !auth() || !m) { drop('shx-lock'); drop('shx-ban'); return; }
+    if (!document.body) { document.addEventListener('DOMContentLoaded', guard, { once: true }); return; }
+    gstyle();
+    if (page === 'isle' && !okIsle(L, m)) {
+      drop('shx-ban');
+      var b = document.getElementById('shx-lock');
+      if (!b) { b = document.createElement('div'); b.id = 'shx-lock'; b.className = 'shx shx-lock'; b.setAttribute('role', 'dialog'); b.setAttribute('aria-modal', 'true'); document.body.appendChild(b); }
+      b.innerHTML = '<div class="shx-box"><h2>課堂任務進行中</h2>' +
+        '<p>' + (m.title ? esc(m.title) + '：' : '') + '這節課只能去下面的島。剩下 <b class="clk">' + left(m) + '</b>，時間到就能自由逛。</p>' +
+        '<div class="lst">' + m.isles.map(function (x) { return '<a href="' + x + '.html">' + esc(isleNm(x, m)) + '</a>'; }).join('') +
+        '<a class="p" href="P.html">理化獸競技島</a><a class="m" href="index.html">回我的理化獸</a></div></div>';
+      var f = b.querySelector('a'); if (f) try { f.focus(); } catch (e) {}
+    } else {
+      drop('shx-lock');
+      if (page === 'map') {
+        var n = document.getElementById('shx-ban') || document.createElement('div');
+        n.id = 'shx-ban'; n.className = 'shx shx-ban';
+        n.innerHTML = '課堂任務：這節課只能去 ' + esc(okList(m)) + '<span class="clk">' + left(m) + '</span>';
+        if (!n.parentNode) document.body.appendChild(n);
+      }
+    }
+    guard.k = setInterval(function () { var c = document.querySelectorAll('.shx-lock .clk,.shx-ban .clk'); for (var i = 0; i < c.length; i++) c[i].textContent = left(m); }, 1000);
+    guard.t = setTimeout(guard, Math.max(1000, Math.min(60000, m.ends - Date.now() + 300)));
+  }
+  /* 點到不能去的島：不跳過去，提示可以去哪裡 */
+  document.addEventListener('click', function (e) {
+    if (page === 'hatch' || inFrame || !auth()) return;
+    var m = misGet(); if (!m) return;
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a) return;
+    var L = pageIsle(a.getAttribute('href')); if (okIsle(L, m)) return;
+    e.preventDefault(); e.stopPropagation();
+    toast('課堂任務進行中，這節課只能去：' + esc(okList(m)), 3800);
+  }, true);
+
   /* ---------- 對外 ---------- */
   function setAuth(x, name) {
     var old = auth(), prev = old && who(old) !== who(x) ? push() : Promise.resolve();
@@ -146,10 +217,11 @@
     });
   }
   function logout() {
+    ls(MK, null);
     return push().then(function () { clearLocal(); ls(OK, null); ls(AK, null); }, function () { clearLocal(); ls(OK, null); ls(AK, null); });
   }
   if ((API || LOCAL) && !inFrame) mirror();
-  window.SciSync = { mirror: mirror, auth: auth, setAuth: setAuth, logout: logout, push: push, pull: pull };
+  window.SciSync = { mirror: mirror, auth: auth, setAuth: setAuth, logout: logout, push: push, pull: pull, setMission: setMission };
 
   if ((!API && !LOCAL) || inFrame) return;
   function boot() {
@@ -157,6 +229,7 @@
     var a = auth();
     /* 沒登入就回對戰吧登入 */
     if (!a) { location.replace('index.html'); return; }
+    guard();
     if (page === 'map') {
       chip();
       /* 每次回到航海圖就把別台裝置的進度拉回來；有變動就重新整理一次 */
@@ -177,8 +250,8 @@
     } catch (e) {}
     return w.slice(0, 40);
   }
-  function beat() { var a = auth(); if (!a || page === 'hatch') return; call('ping', { code: a.code, seat: a.seat, pin: a.pin, where: whereIsle(), act: Date.now() - lastAct, vis: !document.hidden }).then(function (r) { if (r && r.misGain) misDone(r.misGain); }).catch(function () {}); }
-  setTimeout(beat, 3000); setInterval(beat, 60000);
+  function beat() { var a = auth(); if (!a || page === 'hatch') return; call('ping', { code: a.code, seat: a.seat, pin: a.pin, where: whereIsle(), act: Date.now() - lastAct, vis: !document.hidden }).then(function (r) { if (r) setMission(r.mission); if (r && r.misGain) misDone(r.misGain); }).catch(function () {}); }
+  setTimeout(beat, 600); setInterval(beat, 60000);
   document.addEventListener('visibilitychange', beat);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   setInterval(function () { push(); }, 60000);
