@@ -671,6 +671,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 .clwdel{align-self:flex-end;margin-top:6px}
 
 .hs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;width:100%;max-height:52vh;overflow:auto;padding:4px}.hs-cell{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:12px;background:var(--surface2,#f4f4f6)}.hs-cell img{width:64px;height:64px;object-fit:contain;image-rendering:pixelated}.hs-cell b{font-size:13px}.hs-cell small{font-size:11px;color:var(--muted,#888)}.hs-seat{font-size:11px;color:var(--muted,#888)}.hs-cell em{font-style:normal;font-size:11px;color:#c05000}
+.mis-tg{list-style:none;margin:0;padding:0;display:grid;gap:6px}.mis-tg li{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.06);font-size:14px}.mis-tg li b{white-space:nowrap;font-weight:600;opacity:.75}.mis-tg li.ok b{color:#34c759;opacity:1}
 </style>
 
 <a class="sb-hub" href="https://claude.ai/artifact/Ed9P9CtSvjzm6tNa5JuPtm" target="_blank" rel="noopener">辛巴王的遊戲大廳</a>
@@ -1124,56 +1125,74 @@ function renderMisBar() {
   MIS.timer = setInterval(function () { if (!S.board || $('#v-board').hidden || S.select) return clearInterval(MIS.timer);
     call('board', { tok: S.tok, code: S.board.cls.code }).then(function (d) { S.board = d; renderBoard(); if (LIVE.on) liveTick(); }).catch(function () {}); }, 30000);
 }
-/* 參觀任務的目標文字：「到 B 能量島・功與功率 蓋到印章」「到 B 能量島 蓋 2 枚章」 */
-function misWhereTxt(m) { var c = (window.ISLE_CAT || {})[m.isle]; return m.where || (c ? c.n + (m.unit ? '・' + c.u[m.unit - 1] : '') : ''); }
-function misGoalTxt(m) { return '到 ' + misWhereTxt(m) + (m.unit ? ' 蓋到印章' : ' 蓋 ' + m.goal + ' 枚章'); }
+/* 參觀任務：目標清單（舊版只有單一目標也轉成清單）與顯示文字 */
+function misTgts(m) { return m.targets || (m.isle ? [{ isle: m.isle, unit: m.unit || 0, need: m.unit ? 1 : m.goal }] : []); }
+function tgtName(t) { var c = (window.ISLE_CAT || {})[t.isle]; if (t.name) return t.name; if (!c) return t.isle; return c.n + (t.unit ? '・' + c.u[t.unit - 1] : t.need >= c.u.length ? '（全島 ' + c.u.length + ' 枚章）' : '（' + t.need + ' 枚章）'); }
+function misGoalTxt(m) { var ts = misTgts(m); if (ts.length !== 1) return '完成 ' + ts.length + ' 個參觀目標'; var t = ts[0]; return '到 ' + tgtName(t) + (t.unit ? ' 蓋到印章' : ' 蓋章'); }
 function islePage(L) { return L + '.html'; }
+function isleName(L) { var c = (window.ISLE_CAT || {})[L]; return c ? c.n : L; }
+/* 老師開任務：主題島、次主題都可以多選 */
 function misEditor(pre) {
   var CAT = window.ISLE_CAT;
   if (!CAT) { toast('科學島資料還沒載入，請重新整理後再試'); return; }
   var keys = Object.keys(CAT), m = pre || {};
-  var isle = CAT[m.isle] ? m.isle : keys[0], unit = m.unit || 0, need = m.need || 1, kind = (m.reward && m.reward.kind) || 'xp', amt = (m.reward && m.reward.amount) || 50, min = m.minutes || 30;
-  var c = CAT[isle]; if (unit > c.u.length) unit = 0; if (need > c.u.length) need = c.u.length;
-  var chips = function (name, list, cur, fmt) { return list.map(function (v) { return '<button type="button" class="chip" data-' + name + '="' + v + '" aria-pressed="' + (String(v) === String(cur)) + '">' + fmt(v) + '</button>'; }).join(''); };
-  var needs = [1, 2, 3, 5].filter(function (v) { return v < c.u.length; }).concat([c.u.length]);
+  var tg = {}; (m.targets || []).forEach(function (t) { if (CAT[t.isle]) tg[t.isle + ':' + (t.unit || 0)] = { isle: t.isle, unit: t.unit || 0, need: t.unit ? 1 : (t.need || 1) }; });
+  var view = CAT[m.view] ? m.view : ((m.targets && m.targets[0] && CAT[m.targets[0].isle]) ? m.targets[0].isle : keys[0]);
+  var kind = (m.reward && m.reward.kind) || 'xp', amt = (m.reward && m.reward.amount) || 50, min = m.minutes || 30, title = m.title || '';
+  var c = CAT[view], list = function () { return Object.keys(tg).map(function (k) { return tg[k]; }); };
+  var picked = function (L) { return list().filter(function (t) { return t.isle === L; }).length; };
+  var chips = function (name, vals, on, fmt) { return vals.map(function (v) { return '<button type="button" class="chip" data-' + name + '="' + v + '" aria-pressed="' + !!on(v) + '">' + fmt(v) + '</button>'; }).join(''); };
+  var whole = tg[view + ':0'], needs = [1, 2, 3, 5].filter(function (v) { return v < c.u.length; }).concat([c.u.length]);
+  var sel = list();
   openOv('<div class="ov-head"><h2>本節任務：參觀科學島</h2><button class="x" aria-label="關閉">×</button></div>' +
-    '<label class="f">任務名稱（可不填）<input type="text" id="mi-title" maxlength="30" value="' + esc(m.title || '') + '" placeholder="參觀 ' + esc(c.n + (unit ? '・' + c.u[unit - 1] : '')) + '"></label>' +
-    '<div class="stack" style="gap:6px"><b class="small">主題島</b><div class="row">' + chips('i', keys, isle, function (v) { return esc(CAT[v].n); }) + '</div></div>' +
-    '<div class="stack" style="gap:6px"><b class="small">次主題</b><div class="row">' + chips('u', [0].concat(c.u.map(function (_, i) { return i + 1; })), unit, function (v) { return v ? esc(c.u[v - 1]) : '整座島'; }) + '</div></div>' +
-    (unit ? '' : '<div class="stack" style="gap:6px"><b class="small">要蓋幾枚章（這座島共 ' + c.u.length + ' 枚）</b><div class="row">' + chips('n', needs, need, function (v) { return v === c.u.length ? '全部 ' + v + ' 枚' : v + ' 枚'; }) + '</div></div>') +
-    '<div class="stack" style="gap:6px"><b class="small">獎賞（完成的人自動拿到）</b><div class="row">' + chips('r', ['xp:30', 'xp:50', 'xp:80', 'hatch:10', 'hatch:20'], kind + ':' + amt, function (v) { var p = v.split(':'); return rwTxt({ kind: p[0], amount: p[1] }); }) + '</div></div>' +
-    '<div class="stack" style="gap:6px"><b class="small">時間（倒數到下課）</b><div class="row">' + chips('t', [10, 20, 30, 40, 45], min, function (v) { return v + ' 分鐘'; }) + '</div></div>' +
+    '<label class="f">任務名稱（可不填）<input type="text" id="mi-title" maxlength="30" value="' + esc(title) + '" placeholder="參觀科學島"></label>' +
+    '<div class="stack" style="gap:6px"><b class="small">主題島（點一座島，再勾下面的次主題；括號是已選的數量）</b><div class="row">' +
+      chips('i', keys, function (v) { return v === view; }, function (v) { var n = picked(v); return esc(CAT[v].n) + (n ? '（' + n + '）' : ''); }) + '</div></div>' +
+    '<div class="stack" style="gap:6px"><b class="small">' + esc(c.n) + '的次主題（可多選）</b><div class="row">' +
+      chips('u', [0].concat(c.u.map(function (_, i) { return i + 1; })), function (v) { return tg[view + ':' + v]; }, function (v) { return v ? esc(c.u[v - 1]) : '整座島'; }) + '</div></div>' +
+    (whole ? '<div class="stack" style="gap:6px"><b class="small">整座島要蓋幾枚章（這座島共 ' + c.u.length + ' 枚）</b><div class="row">' +
+      chips('n', needs, function (v) { return v === whole.need; }, function (v) { return v === c.u.length ? '全部 ' + v + ' 枚' : v + ' 枚'; }) + '</div></div>' : '') +
+    '<div class="stack" style="gap:6px"><b class="small">已選的目標（' + sel.length + '）</b><div class="row">' +
+      (sel.length ? sel.map(function (t) { return '<button type="button" class="chip" data-x="' + t.isle + ':' + t.unit + '" aria-pressed="true" title="移除">' + esc(tgtName(t)) + ' ×</button>'; }).join('') : '<span class="small muted">還沒選，請在上面勾選次主題或整座島</span>') + '</div></div>' +
+    '<div class="stack" style="gap:6px"><b class="small">獎賞（全部目標完成的人自動拿到）</b><div class="row">' + chips('r', ['xp:30', 'xp:50', 'xp:80', 'hatch:10', 'hatch:20'], function (v) { return v === kind + ':' + amt; }, function (v) { var p = v.split(':'); return rwTxt({ kind: p[0], amount: p[1] }); }) + '</div></div>' +
+    '<div class="stack" style="gap:6px"><b class="small">時間（倒數到下課）</b><div class="row">' + chips('t', [10, 20, 30, 40, 45], function (v) { return v === min; }, function (v) { return v + ' 分鐘'; }) + '</div></div>' +
     '<div class="err" id="mi-err" hidden></div><div class="row"><button class="btn orange big" id="mi-go">開始任務</button></div>' +
-    '<p class="small muted" style="margin:0">學生到島上完成次主題（做完實驗＋答對 4 題）就能蓋章；蓋到指定的章就自動拿到獎賞。之前已經蓋過的同學，也算完成。重新開始一個任務，大家的進度會從 0 開始。</p>');
+    '<p class="small muted" style="margin:0">學生到島上完成次主題（做完實驗＋答對 4 題）就能蓋章；每個目標的章都蓋到，就自動拿到獎賞。之前已經蓋過的章也算。重新開始一個任務，大家的進度會從 0 開始。</p>');
   var box = $('#ov-box');
-  var cur = function () { return { title: $('#mi-title').value, isle: isle, unit: unit, need: need, reward: { kind: kind, amount: amt }, minutes: min }; };
-  /* 換島、換次主題會改變下面的選項，整個重畫 */
-  [['i', function (v) { var k = cur(); k.isle = v; k.unit = 0; k.need = 1; misEditor(k); }], ['u', function (v) { var k = cur(); k.unit = Number(v); misEditor(k); }],
-   ['n', function (v) { need = Number(v); }], ['r', function (v) { var p = v.split(':'); kind = p[0]; amt = Number(p[1]); }], ['t', function (v) { min = Number(v); }]].forEach(function (x) {
-    box.querySelectorAll('[data-' + x[0] + ']').forEach(function (ch) { ch.onclick = function () { box.querySelectorAll('[data-' + x[0] + ']').forEach(function (o) { o.setAttribute('aria-pressed', o === ch); }); x[1](ch.dataset[x[0]]); }; });
-  });
+  var again = function () { misEditor({ title: $('#mi-title').value, view: view, targets: list(), reward: { kind: kind, amount: amt }, minutes: min }); };
+  box.querySelectorAll('[data-i]').forEach(function (b) { b.onclick = function () { view = b.dataset.i; again(); }; });
+  box.querySelectorAll('[data-u]').forEach(function (b) { b.onclick = function () { var u = Number(b.dataset.u), k = view + ':' + u; if (tg[k]) delete tg[k]; else tg[k] = { isle: view, unit: u, need: 1 }; again(); }; });
+  box.querySelectorAll('[data-n]').forEach(function (b) { b.onclick = function () { tg[view + ':0'].need = Number(b.dataset.n); again(); }; });
+  box.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { delete tg[b.dataset.x]; again(); }; });
+  box.querySelectorAll('[data-r]').forEach(function (b) { b.onclick = function () { var p = b.dataset.r.split(':'); kind = p[0]; amt = Number(p[1]); box.querySelectorAll('[data-r]').forEach(function (o) { o.setAttribute('aria-pressed', o === b); }); }; });
+  box.querySelectorAll('[data-t]').forEach(function (b) { b.onclick = function () { min = Number(b.dataset.t); box.querySelectorAll('[data-t]').forEach(function (o) { o.setAttribute('aria-pressed', o === b); }); }; });
   $('#mi-go').onclick = function () {
-    var b = this; showErr('#mi-err'); busy(b, true, '設定中');
-    call('missionSet', { tok: S.tok, code: S.board.cls.code, type: 'isle', title: $('#mi-title').value, isle: isle, unit: unit, need: need, kind: kind, amount: amt, minutes: min })
+    var b = this; showErr('#mi-err');
+    if (!list().length) { showErr('#mi-err', new Error('請至少選一個次主題或整座島。')); return; }
+    busy(b, true, '設定中');
+    call('missionSet', { tok: S.tok, code: S.board.cls.code, type: 'isle', title: $('#mi-title').value, targets: list(), kind: kind, amount: amt, minutes: min })
       .then(function (d) {
         S.board = d; closeOv(); renderBoard();
-        toast(d.misPre ? '任務開始！已經有 ' + d.misPre + ' 位同學之前就蓋過章，獎賞已發放' : '任務開始！學生的研究室會出現任務卡');
+        toast(d.misPre ? '任務開始！已經有 ' + d.misPre + ' 位同學之前就蓋過這些章，獎賞已發放' : '任務開始！學生的研究室會出現任務卡');
         if (d.events && d.events.length) setTimeout(function () { playEvents(d.events); }, 600);
       }).catch(function (e) { showErr('#mi-err', e); busy(b, false); });
   };
 }
-$('#b-mis').onclick = function () { var m = S.board.cls.mission; misEditor(m ? { title: m.title, isle: m.isle, unit: m.unit, need: m.goal, reward: m.reward, minutes: Math.max(5, Math.round((m.ends - Date.now()) / 60000)) } : null); };
+$('#b-mis').onclick = function () { var m = S.board.cls.mission; misEditor(m && m.type === 'isle' ? { title: m.title, targets: misTgts(m), reward: m.reward, minutes: Math.max(5, Math.round((m.ends - Date.now()) / 60000)) } : null); };
 /* 學生端：研究室的任務卡 */
 function renderMisCard() {
   var c = $('#lab-mis'), m = S.me && S.me.mission;
   if (!m || m.ends <= Date.now()) { c.hidden = true; return; }
   c.hidden = false;
   if (m.type === 'isle') {
+    var ts = m.targets || misTgts(m), isles = [];
+    ts.forEach(function (t) { if (isles.indexOf(t.isle) < 0) isles.push(t.isle); });
     c.innerHTML = '<div class="row" style="justify-content:space-between"><h2 style="margin:0">課堂任務・' + esc(m.title) + '</h2><span class="misclock" data-ends="' + m.ends + '">' + mmss(m.ends) + '</span></div>' +
       '<div class="bar"><span style="width:' + Math.min(100, m.ok / m.goal * 100) + '%"></span></div>' +
       (m.done ? '<div class="feedback ok"><b>任務完成！已經拿到 ' + rwTxt(m.reward) + '。</b><span class="small">還有時間的話，可以到別的島逛逛或做每日訓練。</span></div>'
-        : '<p class="small muted" style="margin:0">' + misGoalTxt(m) + '，就能拿到 <b>' + rwTxt(m.reward) + '</b>。' + (m.unit ? '完成這個次主題（做完實驗＋答對 4 題）就能蓋章。' : '目前蓋了 ' + m.ok + ' 枚。') + '蓋完章約一分鐘內會更新。</p>' +
-          '<div><a class="btn orange big" href="' + islePage(m.isle) + '">前往 ' + esc(misWhereTxt({ isle: m.isle, unit: 0 })) + '</a></div>');
+        : '<p class="small muted" style="margin:0">' + (ts.length > 1 ? '下面 ' + ts.length + ' 個目標都完成' : misGoalTxt(m)) + '，就能拿到 <b>' + rwTxt(m.reward) + '</b>。完成次主題（做完實驗＋答對 4 題）就能蓋章，蓋完約一分鐘內會更新。</p>' +
+          '<ul class="mis-tg">' + ts.map(function (t) { var ok = (t.have || 0) >= t.need; return '<li class="' + (ok ? 'ok' : '') + '"><span>' + esc(tgtName(t)) + '</span><b>' + (ok ? '完成' : t.unit ? '未蓋章' : (t.have || 0) + ' / ' + t.need + ' 枚') + '</b></li>'; }).join('') + '</ul>' +
+          '<div class="row">' + isles.map(function (L, i) { return '<a class="btn ' + (i ? 'ghost' : 'orange') + ' big" href="' + islePage(L) + '">前往 ' + esc(isleName(L)) + '</a>'; }).join('') + '</div>');
     return;
   }
   c.innerHTML = '<div class="row" style="justify-content:space-between"><h2 style="margin:0">課堂任務・' + esc(m.title) + '</h2><span class="misclock" data-ends="' + m.ends + '">' + mmss(m.ends) + '</span></div>' +
