@@ -924,7 +924,8 @@ var FBX = (function () {
     return m;
   }
   function put(path, val) {
-    if (MULTI) { MULTI[path] = val === undefined ? null : clone(val); return; }
+    /* 只合併學生紀錄（加分、對戰結算會一次寫很多人）；其他寫入照舊逐筆送出 */
+    if (MULTI && /^students\/[^/]+\/[^/]+$/.test(path)) { MULTI[path] = val === undefined ? null : clone(val); return; }
     PEND.push(CUR.db.ref(path).set(val === undefined ? null : clone(val)));
   }
   function norm(code, seat, r) {
