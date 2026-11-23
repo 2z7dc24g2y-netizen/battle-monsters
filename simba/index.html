@@ -26,7 +26,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1c2a52;font-family:"N
 #toast{position:fixed;left:50%;top:18%;transform:translate(-50%,-10px);background:rgba(30,20,10,.78);color:#fff;padding:8px 16px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;white-space:nowrap}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 button:focus-visible,a:focus-visible{outline:3px solid #fff;outline-offset:2px}
-@media(max-width:560px){.dock button{padding:9px 10px;font-size:13px;min-width:54px}.bars{grid-template-columns:auto 66px}}
+@media(max-width:560px){.dock{flex-wrap:nowrap;gap:5px}.dock button{flex:1;max-width:76px;min-width:0;padding:9px 2px;font-size:13px}.bars{grid-template-columns:auto 60px}.top-r{flex-direction:column;align-items:flex-end}}
 @media(prefers-reduced-motion:reduce){.bar i,#toast,#tricks{transition:none}.bar.low i{animation:none}}
 </style></head><body>
 <canvas id="c" aria-label="辛巴的後院"></canvas>
