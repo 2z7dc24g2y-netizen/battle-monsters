@@ -225,7 +225,7 @@ a.row:active,.row.tap:active{background:var(--fill)}
 @keyframes snowfall{0%{transform:translate3d(0,-10px,0)}50%{transform:translate3d(14px,52vh,0)}100%{transform:translate3d(-6px,106vh,0)}}
 
 /* 辛巴住在大廳 */
-.simba-yard{position:fixed;left:0;right:0;bottom:0;height:92px;z-index:20;pointer-events:none}
+.simba-yard{position:fixed;left:0;right:0;bottom:0;height:150px;z-index:20;pointer-events:none}
 .simba-cv{position:absolute;left:0;bottom:0;display:block;pointer-events:none}
 .simba-hit{position:absolute;pointer-events:auto;background:transparent;border-radius:30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .simba-hit:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
@@ -634,7 +634,7 @@ var SIMBA_ATLAS={img:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAJRCAMA
 try{
 var A=SIMBA_ATLAS,IMG=new Image();IMG.src=A.img;
 var YARD=/github\.io$/.test(location.hostname)?"../simba/":"https://claude.ai/artifact/CGARorzduDZ9UAdmwNZf54";
-var H=92,GR=20,S=0.78;
+var H=150,GR=20,S=0.78;
 var wrap=document.createElement("div");wrap.className="simba-yard";wrap.setAttribute("aria-label","辛巴");
 var cv=document.createElement("canvas");cv.className="simba-cv";cv.setAttribute("aria-hidden","true");
 var hit=document.createElement("button");hit.className="simba-hit";hit.type="button";hit.setAttribute("aria-label","摸摸辛巴");
