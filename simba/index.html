@@ -39,7 +39,7 @@ button:focus-visible,a:focus-visible{outline:3px solid #fff;outline-offset:2px}
  </div>
  <div class="lv"><span id="lvl">默契 Lv 1</span><div class="bar"><i id="bondb" style="width:0"></i></div></div>
 </div>
-<div class="top-r"><button id="hatb" type="button">聖誕帽 戴</button><button id="snd" type="button">音效 開</button><a href="https://claude.ai/artifact/Ed9P9CtSvjzm6tNa5JuPtm" target="_top">辛巴王的遊戲大廳</a></div>
+<div class="top-r"><button id="hatb" type="button" hidden>帽</button><button id="snd" type="button">音效 開</button><a href="https://claude.ai/artifact/Ed9P9CtSvjzm6tNa5JuPtm" target="_top">辛巴王的遊戲大廳</a></div>
 <div id="toast" role="status"></div>
 <div id="tricks"><button id="t-sit" type="button">坐下</button><button id="t-shake" type="button">握手</button><button id="t-roll" type="button">轉圈</button><button id="t-bow" type="button">鞠躬</button><button id="t-bark" type="button">汪汪</button><button id="t-hop" type="button">跳跳</button><button id="t-belly" type="button">翻肚</button></div>
 <div class="dock">
@@ -68,7 +68,7 @@ try{var sv=JSON.parse(localStorage.getItem(KEY)||'null');if(sv){for(var k in sv)
 var now=new Date(),mon=now.getMonth()+1,dayN=now.getDate();
 var xmasSeason=(mon===12)||(mon===11&&dayN>=15)||(mon===1&&dayN<=5);
 if(Q.get('xmas')==='1')xmasSeason=true;if(Q.get('xmas')==='0')xmasSeason=false;
-if(st.hat===null)st.hat=xmasSeason;
+st.hat=false;
 function save(){st.t=Date.now();try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
 setInterval(save,5000);window.addEventListener('pagehide',save);
 
@@ -387,7 +387,6 @@ function drawDog(c){
   var x=fr[0],y=fr[1],w=fr[2],h=fr[3],ax=fr[4],ay=fr[5];
   c.save();c.translate(X,Y);c.scale(dog.face*DS,DS);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
   c.drawImage(ATI,x,y,w,h,-ax,-ay,w,h);
-  if(st.hat)drawHat(c,fr[6]-ax,fr[7]-ay+4,1.2,1);
   c.restore();c.imageSmoothingEnabled=false;
   dog.headPt=[dog.x+dog.face*(fr[6]-ax)*DS,Y+(fr[7]-ay)*DS];
   dog.mouth=[dog.x+dog.face*(w-ax-8)*DS,Y+(fr[7]-ay+40)*DS];
@@ -537,7 +536,7 @@ $('trickb').addEventListener('click',function(e){e.preventDefault();ac();$('tric
 ['sit','shake','roll','bow','bark','hop','belly'].forEach(function(k){$('t-'+k).addEventListener('click',function(e){e.preventDefault();ac();trick(k);$('tricks').classList.remove('on')})});
 $('snd').addEventListener('click',function(){st.sound=!st.sound;if(st.sound)ac();updHud();save()});
 $('hatb').addEventListener('click',function(){st.hat=!st.hat;updHud();SFX.pop();save()});
-if(!xmasSeason)$('hatb').style.display='none';
+$('hatb').style.display='none';
 window.addEventListener('resize',function(){layout();placeObjs();dog.y=clamp(dog.y,yMin,yMax)});
 
 /* ---------- 啟動 ---------- */
