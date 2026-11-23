@@ -908,6 +908,7 @@ var FBX = (function () {
   var STU = null;                         // 目前的學生 { code, seat, pin }
   var CUR = { db: dbS };                  // 這次動作寫入用的資料庫
   var PEND = [], TASKS = [];
+  var MULTI = null;                       // 這次動作的寫入先收集，最後一次 update() 送出（全班加分只觸發一次更新）
   var LISTEN = {};
 
   function today(off) {
@@ -922,7 +923,10 @@ var FBX = (function () {
     if (/network|unavailable|offline/i.test(c + m)) return '連線失敗，請檢查網路後再試。';
     return m;
   }
-  function put(path, val) { PEND.push(CUR.db.ref(path).set(val === undefined ? null : clone(val))); }
+  function put(path, val) {
+    if (MULTI) { MULTI[path] = val === undefined ? null : clone(val); return; }
+    PEND.push(CUR.db.ref(path).set(val === undefined ? null : clone(val)));
+  }
   function norm(code, seat, r) {
     var d = newStudent_(code, seat), o = {};
     for (var k in d) o[k] = d[k];
@@ -1132,11 +1136,15 @@ var FBX = (function () {
       if (action === 'teacherLogin') p = { tok: 'fb' };
       else if (staff && !p.tok) p = Object.assign({}, p, { tok: 'fb' });
       else if (staff) p = Object.assign({}, p, { tok: 'fb' });
-      var data = run(action, p), mine = PEND, tasks = TASKS; PEND = []; TASKS = [];
+      MULTI = {};
+      var data;
+      try { data = run(action, p); } finally { var mm = MULTI; MULTI = null; }
+      var mine = PEND, tasks = TASKS; PEND = []; TASKS = [];
+      if (Object.keys(mm).length) mine.push(CUR.db.ref().update(mm));
       return Promise.all(mine).then(function () {
         return tasks.reduce(function (a, t) { return a.then(t); }, Promise.resolve());
       }).then(function () { return data; });
-    }).catch(function (e) { PEND = []; TASKS = []; throw new Error(nice(e)); });
+    }).catch(function (e) { PEND = []; TASKS = []; MULTI = null; throw new Error(nice(e)); });
   }
 
   /* ---------- 白板作戰：老師白板 ⇄ 學生手機 ----------

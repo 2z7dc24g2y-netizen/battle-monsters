@@ -670,6 +670,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 
 .clwdel{align-self:flex-end;margin-top:6px}
 
+.hs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;width:100%;max-height:52vh;overflow:auto;padding:4px}.hs-cell{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:12px;background:var(--surface2,#f4f4f6)}.hs-cell img{width:64px;height:64px;object-fit:contain;image-rendering:pixelated}.hs-cell b{font-size:13px}.hs-cell small{font-size:11px;color:var(--muted,#888)}.hs-seat{font-size:11px;color:var(--muted,#888)}.hs-cell em{font-style:normal;font-size:11px;color:#c05000}
 </style>
 
 <a class="sb-hub" href="https://claude.ai/artifact/Ed9P9CtSvjzm6tNa5JuPtm" target="_blank" rel="noopener">辛巴王的遊戲大廳</a>
@@ -1263,7 +1264,26 @@ function reward(seats, kind, amount, btn) {
   }).catch(function (e) { toast(e.message); }).then(function () { busy(btn, false); });
 }
 function playEvents(list) {
-  return list.reduce(function (p, ev) { return p.then(function () { var m = ev.mon.mons[ev.idx] || ev.mon; return ev.hatchedNow ? revealHatch(m, ev.mon.seat + ' 號') : revealEvolve(m, ev.mon.seat + ' 號'); }); }, Promise.resolve());
+  if (!list || !list.length) return Promise.resolve();
+  /* 一次很多人（全班加分）：不逐一開蛋，改成一張彙整卡片 */
+  if (list.length > 1) return showHatchSummary(list);
+  var ev = list[0], m = ev.mon.mons[ev.idx] || ev.mon;
+  return ev.hatchedNow ? revealHatch(m, ev.mon.seat + ' 號') : revealEvolve(m, ev.mon.seat + ' 號');
+}
+/* 彙整卡片：一次列出本次所有孵化、進化的怪獸，只放一次煙火 */
+function showHatchSummary(list) {
+  return new Promise(function (res) {
+    var hatched = list.filter(function (e) { return e.hatchedNow; }).length, evo = list.filter(function (e) { return !e.hatchedNow && e.evolved; }).length;
+    var cells = list.map(function (ev) {
+      var m = ev.mon.mons[ev.idx] || ev.mon, nm = ev.mon.name ? esc(ev.mon.name) : '';
+      return '<div class="hs-cell"><span class="hs-seat">' + esc(ev.mon.seat) + ' 號</span><img src="' + spriteOf(m) + '" alt="">' +
+        '<b>' + esc(m.monName) + '</b><small>' + nm + '</small>' + (ev.hatchedNow ? '' : '<em>進化</em>') + '</div>';
+    }).join('');
+    openOv('<div class="reveal hs"><h2>本次孵化 ' + hatched + ' 隻！</h2>' + (evo ? '<p class="muted" style="margin:0">另有 ' + evo + ' 隻進化</p>' : '') +
+      '<div class="hs-grid">' + cells + '</div><button class="btn orange big" id="rv-ok">太棒了！</button></div>', 'lock');
+    hanabiAt('hatch');
+    $('#rv-ok').onclick = function () { closeOv(); res(); };
+  });
 }
 /* 孵化、進化時放煙火（hanabi.js） */
 function hanabiAt(k) {
