@@ -156,7 +156,53 @@ function misOf_(st, cls) { var x = ext_(st), m = cls.mission; if (!x.mis || x.mi
 function misPub_(st, cls) {
   if (!misOn_(cls)) return null;
   var m = cls.mission, x = ext_(st), me = x.mis && x.mis.id === m.id ? x.mis : { ok: 0, n: 0, done: false };
-  return { id: m.id, title: m.title, goal: m.goal, ends: m.ends, reward: m.reward, ok: me.ok, n: me.n, done: !!me.done };
+  var o = { id: m.id, title: m.title, goal: m.goal, ends: m.ends, reward: m.reward, ok: me.ok, n: me.n, done: !!me.done };
+  if (m.type === 'isle') { o.type = 'isle'; o.isle = m.isle; o.unit = m.unit || 0; o.where = misWhere_(m); }
+  return o;
+}
+/* ---------- 本節任務（參觀科學島）：老師選一座主題島或其中一個次主題，學生到島上蓋到印章就完成 ----------
+ * 次主題：蓋到那一枚章（島上的蓋章條件：做完實驗＋答對 4 題）。整座島：蓋到老師指定的枚數。
+ * 任務開始前就蓋過的章也算，一樣拿獎賞。
+ * k：島上存檔在 localStorage 的名稱；u：次主題（順序就是印章編號 1、2、3…） */
+var ISLE_CAT = {"A":{"n":"A 物質組成島","k":"sciIsles.v1","u":["原子模型","原子量","元素與化合物","週期表","化學式","粒子與三態","溫度與狀態","物理／化學性質","分離混合物"]},"B":{"n":"B 能量島","k":"sciIsles.B.v1","u":["能量轉換","功與功率","動能位能","力學能守恆","化學能","溫度與熱量","比熱","熱的傳播","熱與物質","光合作用","酵素","呼吸作用","生態系能量"]},"C":{"n":"C 結構功能島","k":"sciIsles.C.v1","u":["過濾法","結晶法","色層分析","化合物鑑定","分子與原子","同素異形體","同分異構物"]},"D":{"n":"D 生物構造島","k":"sciIsles.D.v1","u":["顯微鏡","細胞構造","擴散滲透","組成層次","細胞分裂","消化吸收","心臟血管","血液循環","呼吸系統","維管束與莖","蒸散與氣孔","花的構造","神經構造","刺激與反應","內分泌","恆定性","植物感應","免疫防禦"]},"E":{"n":"E 物質系統島","k":"sciIsles.E.v1","u":["測量","尺度","力的作用","摩擦力","力矩","簡單機械","壓力","浮力","位移與速度","加速度","運動圖形","圓周運動","慣性","運動定律","作用力與反作用力","氣壓","星系","萬有引力"]},"F":{"n":"F 地球環境島","k":"sciIsles.F.v1","u":["地球三圈","地球的水","礦物","三大岩類","岩石循環","大氣組成","大氣分層","太陽系","類地行星","月相","日食月食"]},"G":{"n":"G 演化島","k":"sciIsles.G.v1","u":["無性生殖","減數分裂","動物生殖","植物生殖","生殖系統","孟德爾","基因遺傳","性別血型","突變","生物技術","化石演化","分類與學名","植物分類","動物分類","五界病毒","微生物"]},"H":{"n":"H 地球歷史島","k":"sciIsles.H.v1","u":["化石形成","化石種類","指相化石","地質年代","地層形成","褶皺","斷層","岩脈與侵蝕面","剖面判讀","地層對比"]},"I":{"n":"I 變動的地球島","k":"sciIsles.I.v1","u":["內外營力","地球分層","張裂型交界","聚合與錯動","地震火山","晝夜長短","照射角度","四季成因","氣壓與等壓線","高低氣壓","氣團鋒面","季風","颱風","梅雨寒乾","波浪海流","潮汐"]},"J":{"n":"J 化學反應島","k":"sciIsles.J.v1","u":["反應現象","質量守恆","反應式與莫耳","燃燒與活性","氧化還原","生活氧化還原","電解質","酸與鹼","pH值","中和沉澱","濃度與接觸面積","溫度與催化劑","化學平衡","有機化合物","酯化皂化","常見塑膠"]},"K":{"n":"K 聲光島","k":"sciIsles.K.v1","u":["波的特徵","聲音傳播","聲音三要素","光的直進","光的反射","光的折射","透鏡成像","光學儀器","色散顏色"]},"L":{"n":"L 生態島","k":"sciIsles.L.v1","u":["生態系","族群","非生物因子","交互作用","食物網","能量塔","碳循環","分解者","陸域生態系","水域生態系","演替","人類影響","生物累積","保育行動"]},"M":{"n":"M 科技人文島","k":"sciIsles.M.v1","u":["科學史","生物技術","人造材料","生物處理","電力輸送","用電安全","電費計算","颱風","地震","山崩","空氣汙染","水汙染","重金屬","感官汙染"]},"N":{"n":"N 永續島","k":"sciIsles.N.v1","u":["生物資源","節約能源","5R","廢棄物","生態足跡","溫室效應","暖化與生物","氣候衝擊","減緩調適","化石燃料","再生能源","生質能","新興科技","臺灣能源"]},"Q":{"n":"K2 電磁島","k":"sciIsles.Q.v1","u":["靜電","電流與電壓","歐姆定律","電流熱效應","磁鐵與磁場","電流磁效應","電動機","電磁感應"]}};
+if (typeof window !== 'undefined') window.ISLE_CAT = ISLE_CAT;
+function misWhere_(m) { var c = ISLE_CAT[m.isle]; return c ? c.n + (m.unit ? '・' + c.u[m.unit - 1] : '') : ''; }
+/* 從島上的存檔整理出每座島蓋到的章：{ B: [1, 2, 5], ... } */
+function stampsFromData_(data) {
+  var out = {};
+  Object.keys(ISLE_CAT).forEach(function (L) {
+    var c = ISLE_CAT[L], raw = data && data[c.k], o; if (!raw) return;
+    try { o = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { return; }
+    var sp = o && o.stamps; if (!sp || typeof sp !== 'object') return;
+    var a = Object.keys(sp).filter(function (k) { return sp[k]; }).map(Number).filter(function (n) { return n >= 1 && n <= c.u.length; }).sort(function (x, y) { return x - y; });
+    if (a.length) out[L] = a;
+  });
+  return out;
+}
+/* 學生自己的裝置有完整的島上存檔；老師的白板沒有，就用學生紀錄裡的印章摘要 */
+function stampsOf_(S, st) {
+  var sv = S.getIsle ? S.getIsle(st.key || (st.code + '-' + st.seat)) : null;
+  if (sv && sv.data) { var d = null; try { d = typeof sv.data === 'string' ? JSON.parse(sv.data) : sv.data; } catch (e) {} if (d) return stampsFromData_(d); }
+  return ext_(st).stp || null;
+}
+/* 發任務獎賞（答題任務和參觀任務共用） */
+function misGrant_(st, cls) {
+  var res = {}, ms = monsOf_(st), li = leadOf_(st, ms), ei = eggIndex_(ms), r = cls.mission.reward;
+  if (r.kind === 'hatch' && ei >= 0) { res.hatchedNow = applyHatch_(ms[ei], r.amount); res.hatchedIdx = ei; }
+  else { var pre = stageOf(ms[li].level), was = ms[li].hatched; res.levelUps = applyXp_(ms[li], r.amount); st.totalXp = (Number(st.totalXp) || 0) + r.amount; res.evolved = was && stageOf(ms[li].level) > pre; res.evolvedIdx = li; }
+  res.newEgg = grantEgg_(st, ms); setMons_(st, ms);
+  return res;
+}
+/* 檢查參觀任務的進度；有變化才回傳（呼叫的人負責存檔） */
+function misCheck_(S, st, cls, stamps) {
+  if (!misOn_(cls) || cls.mission.type !== 'isle') return null;
+  var m = cls.mission, mi = misOf_(st, cls); if (mi.done) return null;
+  var sp = stamps || stampsOf_(S, st); if (!sp) return null;
+  var a = sp[m.isle] || [], have = Math.min(m.goal, m.unit ? (a.indexOf(m.unit) >= 0 ? 1 : 0) : a.length);
+  var res = { changed: have !== mi.ok, finished: false, reward: m.reward };
+  mi.ok = have;
+  if (have >= m.goal) { mi.done = true; res.finished = true; var g = misGrant_(st, cls); for (var k in g) res[k] = g[k]; }
+  return res.changed || res.finished ? res : null;
 }
 function pub_(st, cls) {
   var ms = monsOf_(st), lead = leadOf_(st, ms), x = ext_(st);
@@ -317,11 +363,12 @@ var API = {
 
   /* ----- 學生 ----- */
   studentLogin: function (S, p) {
-    var a = authStudent_(S, p), st = a.st, ms = monsOf_(st);
-    var newEgg = grantEgg_(st, ms);
-    if (newEgg >= 0) { setMons_(st, ms); S.saveStudent(st); }
+    var a = authStudent_(S, p), st = a.st;
+    var mr = misCheck_(S, st, a.cls); if (mr) S.saveStudent(st);
+    var ms = monsOf_(st), newEgg = mr && mr.newEgg >= 0 ? mr.newEgg : grantEgg_(st, ms);
+    if (newEgg >= 0 && !(mr && mr.newEgg >= 0)) { setMons_(st, ms); S.saveStudent(st); }
     var unseen = ms.map(function (m, i) { return m.hatched && m.seenHatch === false ? i : -1; }).filter(function (i) { return i >= 0; });
-    return { me: pub_(st, a.cls), clsName: a.cls.name, seenHatch: !unseen.length, unseen: unseen, newEgg: newEgg, battlesLeft: battlesLeft_(S, st) };
+    return { me: pub_(st, a.cls), clsName: a.cls.name, seenHatch: !unseen.length, unseen: unseen, newEgg: newEgg, battlesLeft: battlesLeft_(S, st), mis: mr && mr.finished ? mr : null };
   },
   setLead: function (S, p) {
     var a = authStudent_(S, p), st = a.st, ms = monsOf_(st), i = Number(p.i);
@@ -738,6 +785,8 @@ API.isleSave = function (S, p) {
   var at = Date.now();
   if (S.putIsle) S.putIsle(st.key || (st.code + '-' + st.seat), JSON.stringify(data), at);
   var r = isleAward_(S, st, data);
+  var stp = stampsFromData_(data); ext_(st).stp = stp;
+  var mr = misCheck_(S, st, a.cls, stp); if (mr) r.mission = mr;
   S.saveStudent(st);
   var me = pub_(st, a.cls);
   r.team = isleTeam_(st);
@@ -751,7 +800,8 @@ API.ping = function (S, p) {
   var a = authStudent_(S, p), now = Date.now(), act = Math.max(0, Math.min(36e5, Number(p.act) || 0));
   S.liveSet(a.cls.code, a.st.seat, { t: now, a: now - act, v: p.vis !== false, w: String(p.where || '').slice(0, 40) });
   a.cls._today = S.today();
-  return { ok: true, mission: misPub_(a.st, a.cls) };
+  var mr = misCheck_(S, a.st, a.cls); if (mr) S.saveStudent(a.st);
+  return { ok: true, mission: misPub_(a.st, a.cls), misGain: mr && mr.finished ? mr : null, me: mr ? pub_(a.st, a.cls) : undefined };
 };
 API.liveBoard = function (S, p) {
   var who = authStaff_(S, p), cls = myClass_(S, who, p.code), list = S.listStudents(cls.code), now = Date.now(), today = S.today();
@@ -765,16 +815,34 @@ API.liveBoard = function (S, p) {
   return { live: out, count: cnt, at: now };
 };
 API.missionSet = function (S, p) {
-  var cls = myClass_(S, authStaff_(S, p), p.code), goal = Math.round(Number(p.goal)), min = Math.round(Number(p.minutes)), amt = Math.round(Number(p.amount)), kind = p.kind === 'hatch' ? 'hatch' : 'xp';
-  if (!(goal >= 1 && goal <= 30)) fail_('答對題數請設定 1～30 題。');
+  var cls = myClass_(S, authStaff_(S, p), p.code), min = Math.round(Number(p.minutes)), amt = Math.round(Number(p.amount)), kind = p.kind === 'hatch' ? 'hatch' : 'xp';
   if (!(min >= 5 && min <= 50)) fail_('時間請設定 5～50 分鐘。');
   if (!(amt >= 1 && amt <= (kind === 'xp' ? 200 : 50))) fail_('獎賞數量不正確。');
-  var scope = Array.isArray(p.scope) ? p.scope.slice(0, 40).map(String) : [];
-  if (!S.questionIndex().some(function (q) { return inScope_(q, scope); })) fail_('這個範圍裡沒有題目，請換一個範圍。');
-  cls.mission = { id: 'M' + Date.now().toString(36), title: String(p.title || '').trim().slice(0, 30) || '本節任務', scope: scope, goal: goal, reward: { kind: kind, amount: amt }, ends: Date.now() + min * 60000, at: Date.now() };
+  var now = Date.now(), title = String(p.title || '').trim().slice(0, 30), reward = { kind: kind, amount: amt };
+  if (p.type === 'isle') {
+    var L = String(p.isle || ''), c = ISLE_CAT[L]; if (!c) fail_('請選一座主題島。');
+    var unit = Math.round(Number(p.unit) || 0); if (!(unit >= 0 && unit <= c.u.length)) fail_('找不到這個次主題。');
+    var need = unit ? 1 : Math.round(Number(p.need) || 1); if (!(need >= 1 && need <= c.u.length)) fail_('印章請設定 1～' + c.u.length + ' 枚。');
+    cls.mission = { id: 'M' + now.toString(36), type: 'isle', isle: L, unit: unit, goal: need, reward: reward, ends: now + min * 60000, at: now };
+    cls.mission.title = title || ('參觀 ' + misWhere_(cls.mission)).slice(0, 30);
+  } else {
+    var goal = Math.round(Number(p.goal));
+    if (!(goal >= 1 && goal <= 30)) fail_('答對題數請設定 1～30 題。');
+    var scope = Array.isArray(p.scope) ? p.scope.slice(0, 40).map(String) : [];
+    if (!S.questionIndex().some(function (q) { return inScope_(q, scope); })) fail_('這個範圍裡沒有題目，請換一個範圍。');
+    cls.mission = { id: 'M' + now.toString(36), title: title || '本節任務', scope: scope, goal: goal, reward: reward, ends: now + min * 60000, at: now };
+  }
   var save = {}; for (var k in cls) if (k.charAt(0) !== '_') save[k] = cls[k];
   S.saveClass(save); cls._today = S.today();
-  return board_(S, cls);
+  /* 之前就蓋過章的同學：馬上算完成、發獎賞 */
+  var events = [], pre = 0;
+  if (cls.mission.type === 'isle') S.listStudents(cls.code).forEach(function (st) {
+    var r = misCheck_(S, st, cls); if (!r) return;
+    S.saveStudent(st);
+    if (r.finished) { pre++; if (r.hatchedNow || r.evolved) events.push({ hatchedNow: !!r.hatchedNow, evolved: !!r.evolved, idx: r.hatchedNow ? r.hatchedIdx : r.evolvedIdx, mon: pub_(st, cls) }); }
+  });
+  var b = board_(S, cls); b.misPre = pre; b.events = events;
+  return b;
 };
 API.missionEnd = function (S, p) {
   var cls = myClass_(S, authStaff_(S, p), p.code);
@@ -808,10 +876,7 @@ API.missionA = function (S, p) {
   st.answered++; if (ok) st.correct++;
   if (ok && !mi.done && mi.ok >= cls.mission.goal) {
     mi.done = true; res.finished = true;
-    var ms = monsOf_(st), li = leadOf_(st, ms), ei = eggIndex_(ms), r = cls.mission.reward;
-    if (r.kind === 'hatch' && ei >= 0) { res.hatchedNow = applyHatch_(ms[ei], r.amount); res.hatchedIdx = ei; }
-    else { var pre = stageOf(ms[li].level), was = ms[li].hatched; res.levelUps = applyXp_(ms[li], r.amount); st.totalXp = (Number(st.totalXp) || 0) + r.amount; res.evolved = was && stageOf(ms[li].level) > pre; res.evolvedIdx = li; }
-    res.newEgg = grantEgg_(st, ms); setMons_(st, ms);
+    var g = misGrant_(st, cls); for (var gk in g) res[gk] = g[gk];
   }
   S.saveStudent(st);
   S.logAnswer({ code: st.code, seat: st.seat, qid: qid, choice: choice, ok: ok });

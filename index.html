@@ -1111,10 +1111,10 @@ var MIS = { timer: 0 };
 function renderMisBar() {
   var bar = $('#b-misbar'), m = S.board && S.board.cls.mission; clearInterval(MIS.timer);
   if (!m || m.ends <= Date.now()) { bar.hidden = true; $('#b-mis').textContent = '本節任務'; return; }
-  var st = S.board.students, done = st.filter(function (x) { return x.mission && x.mission.done; }).length, going = st.filter(function (x) { return x.mission && !x.mission.done && x.mission.n; }).length;
+  var st = S.board.students, isle = m.type === 'isle', done = st.filter(function (x) { return x.mission && x.mission.done; }).length, going = st.filter(function (x) { return x.mission && !x.mission.done && (isle ? x.mission.ok : x.mission.n); }).length;
   bar.hidden = false; $('#b-mis').textContent = '修改任務';
-  bar.innerHTML = '<div><b>' + esc(m.title) + '</b><span class="small muted">　答對 ' + m.goal + ' 題・完成可得 ' + rwTxt(m.reward) + '</span></div>' +
-    '<span class="misclock" data-ends="' + m.ends + '">' + mmss(m.ends) + '</span><span class="stat">完成<b>' + done + '</b>／' + st.length + '</span><span class="stat">作答中<b>' + going + '</b></span>' +
+  bar.innerHTML = '<div><b>' + esc(m.title) + '</b><span class="small muted">　' + (isle ? misGoalTxt(m) : '答對 ' + m.goal + ' 題') + '・完成可得 ' + rwTxt(m.reward) + '</span></div>' +
+    '<span class="misclock" data-ends="' + m.ends + '">' + mmss(m.ends) + '</span><span class="stat">完成<b>' + done + '</b>／' + st.length + '</span><span class="stat">' + (isle ? '蓋章中' : '作答中') + '<b>' + going + '</b></span>' +
     '<button class="btn ghost sm" id="mis-end">結束任務</button>';
   $('#mis-end').onclick = function () {
     var b = this; if (!b.dataset.arm) { b.dataset.arm = 1; b.textContent = '再按一次結束'; b.classList.add('orange'); setTimeout(function () { delete b.dataset.arm; b.textContent = '結束任務'; b.classList.remove('orange'); }, 4000); return; }
@@ -1124,35 +1124,58 @@ function renderMisBar() {
   MIS.timer = setInterval(function () { if (!S.board || $('#v-board').hidden || S.select) return clearInterval(MIS.timer);
     call('board', { tok: S.tok, code: S.board.cls.code }).then(function (d) { S.board = d; renderBoard(); if (LIVE.on) liveTick(); }).catch(function () {}); }, 30000);
 }
+/* 參觀任務的目標文字：「到 B 能量島・功與功率 蓋到印章」「到 B 能量島 蓋 2 枚章」 */
+function misWhereTxt(m) { var c = (window.ISLE_CAT || {})[m.isle]; return m.where || (c ? c.n + (m.unit ? '・' + c.u[m.unit - 1] : '') : ''); }
+function misGoalTxt(m) { return '到 ' + misWhereTxt(m) + (m.unit ? ' 蓋到印章' : ' 蓋 ' + m.goal + ' 枚章'); }
+function islePage(L) { return L + '.html'; }
 function misEditor(pre) {
-  var m = pre || {}, sc = m.scope || (S.board.cls.scope || []), goal = m.goal || 5, kind = (m.reward && m.reward.kind) || 'xp', amt = (m.reward && m.reward.amount) || 50, min = m.minutes || 30;
+  var CAT = window.ISLE_CAT;
+  if (!CAT) { toast('科學島資料還沒載入，請重新整理後再試'); return; }
+  var keys = Object.keys(CAT), m = pre || {};
+  var isle = CAT[m.isle] ? m.isle : keys[0], unit = m.unit || 0, need = m.need || 1, kind = (m.reward && m.reward.kind) || 'xp', amt = (m.reward && m.reward.amount) || 50, min = m.minutes || 30;
+  var c = CAT[isle]; if (unit > c.u.length) unit = 0; if (need > c.u.length) need = c.u.length;
   var chips = function (name, list, cur, fmt) { return list.map(function (v) { return '<button type="button" class="chip" data-' + name + '="' + v + '" aria-pressed="' + (String(v) === String(cur)) + '">' + fmt(v) + '</button>'; }).join(''); };
-  openOv('<div class="ov-head"><h2>本節任務</h2><button class="x" aria-label="關閉">×</button></div>' +
-    '<label class="f">任務名稱<input type="text" id="mi-title" maxlength="30" value="' + esc(m.title || '') + '" placeholder="例如：串並聯電路小挑戰"></label>' +
-    '<div class="stack" style="gap:6px"><b class="small">題目範圍</b><div class="row"><span class="small">' + (sc.length ? esc(sc.join('、')) : '全部題庫') + '</span><button type="button" class="btn ghost sm" id="mi-scope">選範圍</button></div></div>' +
-    '<div class="stack" style="gap:6px"><b class="small">目標：答對幾題</b><div class="row">' + chips('g', [3, 5, 8, 10, 15], goal, function (v) { return v + ' 題'; }) + '</div></div>' +
+  var needs = [1, 2, 3, 5].filter(function (v) { return v < c.u.length; }).concat([c.u.length]);
+  openOv('<div class="ov-head"><h2>本節任務：參觀科學島</h2><button class="x" aria-label="關閉">×</button></div>' +
+    '<label class="f">任務名稱（可不填）<input type="text" id="mi-title" maxlength="30" value="' + esc(m.title || '') + '" placeholder="參觀 ' + esc(c.n + (unit ? '・' + c.u[unit - 1] : '')) + '"></label>' +
+    '<div class="stack" style="gap:6px"><b class="small">主題島</b><div class="row">' + chips('i', keys, isle, function (v) { return esc(CAT[v].n); }) + '</div></div>' +
+    '<div class="stack" style="gap:6px"><b class="small">次主題</b><div class="row">' + chips('u', [0].concat(c.u.map(function (_, i) { return i + 1; })), unit, function (v) { return v ? esc(c.u[v - 1]) : '整座島'; }) + '</div></div>' +
+    (unit ? '' : '<div class="stack" style="gap:6px"><b class="small">要蓋幾枚章（這座島共 ' + c.u.length + ' 枚）</b><div class="row">' + chips('n', needs, need, function (v) { return v === c.u.length ? '全部 ' + v + ' 枚' : v + ' 枚'; }) + '</div></div>') +
     '<div class="stack" style="gap:6px"><b class="small">獎賞（完成的人自動拿到）</b><div class="row">' + chips('r', ['xp:30', 'xp:50', 'xp:80', 'hatch:10', 'hatch:20'], kind + ':' + amt, function (v) { var p = v.split(':'); return rwTxt({ kind: p[0], amount: p[1] }); }) + '</div></div>' +
     '<div class="stack" style="gap:6px"><b class="small">時間（倒數到下課）</b><div class="row">' + chips('t', [10, 20, 30, 40, 45], min, function (v) { return v + ' 分鐘'; }) + '</div></div>' +
     '<div class="err" id="mi-err" hidden></div><div class="row"><button class="btn orange big" id="mi-go">開始任務</button></div>' +
-    '<p class="small muted" style="margin:0">學生的研究室最上面會出現任務卡和倒數；答對指定題數就自動拿到獎賞。重新開始一個任務，大家的進度會從 0 開始。</p>');
+    '<p class="small muted" style="margin:0">學生到島上完成次主題（做完實驗＋答對 4 題）就能蓋章；蓋到指定的章就自動拿到獎賞。之前已經蓋過的同學，也算完成。重新開始一個任務，大家的進度會從 0 開始。</p>');
   var box = $('#ov-box');
-  [['g', function (v) { goal = Number(v); }], ['r', function (v) { var p = v.split(':'); kind = p[0]; amt = Number(p[1]); }], ['t', function (v) { min = Number(v); }]].forEach(function (x) {
-    box.querySelectorAll('[data-' + x[0] + ']').forEach(function (c) { c.onclick = function () { box.querySelectorAll('[data-' + x[0] + ']').forEach(function (o) { o.setAttribute('aria-pressed', o === c); }); x[1](c.dataset[x[0]]); }; });
+  var cur = function () { return { title: $('#mi-title').value, isle: isle, unit: unit, need: need, reward: { kind: kind, amount: amt }, minutes: min }; };
+  /* 換島、換次主題會改變下面的選項，整個重畫 */
+  [['i', function (v) { var k = cur(); k.isle = v; k.unit = 0; k.need = 1; misEditor(k); }], ['u', function (v) { var k = cur(); k.unit = Number(v); misEditor(k); }],
+   ['n', function (v) { need = Number(v); }], ['r', function (v) { var p = v.split(':'); kind = p[0]; amt = Number(p[1]); }], ['t', function (v) { min = Number(v); }]].forEach(function (x) {
+    box.querySelectorAll('[data-' + x[0] + ']').forEach(function (ch) { ch.onclick = function () { box.querySelectorAll('[data-' + x[0] + ']').forEach(function (o) { o.setAttribute('aria-pressed', o === ch); }); x[1](ch.dataset[x[0]]); }; });
   });
-  var cur = function () { return { title: $('#mi-title').value, scope: sc, goal: goal, reward: { kind: kind, amount: amt }, minutes: min }; };
-  $('#mi-scope').onclick = function () { var keep = cur(); scopeEditor(sc, function (scope) { keep.scope = scope; misEditor(keep); }, '任務的題目範圍'); };
   $('#mi-go').onclick = function () {
     var b = this; showErr('#mi-err'); busy(b, true, '設定中');
-    call('missionSet', { tok: S.tok, code: S.board.cls.code, title: $('#mi-title').value, scope: sc, goal: goal, kind: kind, amount: amt, minutes: min })
-      .then(function (d) { S.board = d; closeOv(); renderBoard(); toast('任務開始！學生的研究室會出現任務卡'); }).catch(function (e) { showErr('#mi-err', e); busy(b, false); });
+    call('missionSet', { tok: S.tok, code: S.board.cls.code, type: 'isle', title: $('#mi-title').value, isle: isle, unit: unit, need: need, kind: kind, amount: amt, minutes: min })
+      .then(function (d) {
+        S.board = d; closeOv(); renderBoard();
+        toast(d.misPre ? '任務開始！已經有 ' + d.misPre + ' 位同學之前就蓋過章，獎賞已發放' : '任務開始！學生的研究室會出現任務卡');
+        if (d.events && d.events.length) setTimeout(function () { playEvents(d.events); }, 600);
+      }).catch(function (e) { showErr('#mi-err', e); busy(b, false); });
   };
 }
-$('#b-mis').onclick = function () { var m = S.board.cls.mission; misEditor(m ? { title: m.title, scope: m.scope, goal: m.goal, reward: m.reward, minutes: Math.max(5, Math.round((m.ends - Date.now()) / 60000)) } : null); };
+$('#b-mis').onclick = function () { var m = S.board.cls.mission; misEditor(m ? { title: m.title, isle: m.isle, unit: m.unit, need: m.goal, reward: m.reward, minutes: Math.max(5, Math.round((m.ends - Date.now()) / 60000)) } : null); };
 /* 學生端：研究室的任務卡 */
 function renderMisCard() {
   var c = $('#lab-mis'), m = S.me && S.me.mission;
   if (!m || m.ends <= Date.now()) { c.hidden = true; return; }
   c.hidden = false;
+  if (m.type === 'isle') {
+    c.innerHTML = '<div class="row" style="justify-content:space-between"><h2 style="margin:0">課堂任務・' + esc(m.title) + '</h2><span class="misclock" data-ends="' + m.ends + '">' + mmss(m.ends) + '</span></div>' +
+      '<div class="bar"><span style="width:' + Math.min(100, m.ok / m.goal * 100) + '%"></span></div>' +
+      (m.done ? '<div class="feedback ok"><b>任務完成！已經拿到 ' + rwTxt(m.reward) + '。</b><span class="small">還有時間的話，可以到別的島逛逛或做每日訓練。</span></div>'
+        : '<p class="small muted" style="margin:0">' + misGoalTxt(m) + '，就能拿到 <b>' + rwTxt(m.reward) + '</b>。' + (m.unit ? '完成這個次主題（做完實驗＋答對 4 題）就能蓋章。' : '目前蓋了 ' + m.ok + ' 枚。') + '蓋完章約一分鐘內會更新。</p>' +
+          '<div><a class="btn orange big" href="' + islePage(m.isle) + '">前往 ' + esc(misWhereTxt({ isle: m.isle, unit: 0 })) + '</a></div>');
+    return;
+  }
   c.innerHTML = '<div class="row" style="justify-content:space-between"><h2 style="margin:0">課堂任務・' + esc(m.title) + '</h2><span class="misclock" data-ends="' + m.ends + '">' + mmss(m.ends) + '</span></div>' +
     '<div class="bar"><span style="width:' + Math.min(100, m.ok / m.goal * 100) + '%"></span></div>' +
     (m.done ? '<div class="feedback ok"><b>任務完成！已經拿到 ' + rwTxt(m.reward) + '。</b><span class="small">還有時間的話，可以繼續做每日訓練或去科學島。</span></div>'
@@ -1231,9 +1254,21 @@ function whereNow() {
 function beat() {
   if (!S.auth) return;
   call('ping', { code: S.auth.code, seat: S.auth.seat, pin: S.auth.pin, where: whereNow(), act: Date.now() - BEAT.last, vis: !document.hidden }).then(function (r) {
-    if (!S.me || !r) return; var a = JSON.stringify(S.me.mission || null), b = JSON.stringify(r.mission || null);
+    if (!S.me || !r) return;
+    if (r.me) { S.me = r.me; if (!$('#v-lab').hidden) renderLab(); }
+    if (r.misGain) misCelebrate(r.misGain, S.me);
+    var a = JSON.stringify(S.me.mission || null), b = JSON.stringify(r.mission || null);
     if (a !== b) { var fresh = !S.me.mission && r.mission; S.me.mission = r.mission; if (!$('#v-lab').hidden) renderMisCard(); if (fresh) toast('老師開了課堂任務：' + r.mission.title); }
   }).catch(function () {});
+}
+/* 參觀任務完成：提示、煙火、孵化或進化動畫 */
+function misCelebrate(g, me) {
+  toast('課堂任務完成！獲得 ' + rwTxt(g.reward)); hanabiAt('evolve');
+  var chain = new Promise(function (ok) { setTimeout(ok, 1800); });
+  if (g.hatchedNow) chain = chain.then(function () { return revealHatch(me.mons[g.hatchedIdx]); }).then(function () { return call('seenHatch', S.auth).catch(function () {}); });
+  if (g.evolved) chain = chain.then(function () { return revealEvolve(me.mons[g.evolvedIdx]); });
+  if (g.newEgg >= 0) chain = chain.then(function () { return revealEgg(me.mons[g.newEgg]); });
+  return chain;
 }
 function startBeat() { clearInterval(BEAT.timer); beat(); BEAT.timer = setInterval(beat, 60000); }
 document.addEventListener('visibilitychange', function () { if (S.auth) beat(); });
@@ -1465,7 +1500,9 @@ $('#s-login').onclick = function () {
     var chain = Promise.resolve();
     (d.unseen || []).forEach(function (i) { chain = chain.then(function () { return revealHatch(d.me.mons[i]); }); });
     if ((d.unseen || []).length) chain = chain.then(function () { return call('seenHatch', S.auth).catch(function () {}); });
+    if (d.mis && d.mis.evolved) chain = chain.then(function () { return revealEvolve(d.me.mons[d.mis.evolvedIdx]); });
     if (d.newEgg >= 0) chain = chain.then(function () { return revealEgg(d.me.mons[d.newEgg]); });
+    if (d.mis) toast('課堂任務完成！獲得 ' + rwTxt(d.mis.reward));
   }).catch(function (e) { showErr('#s-err', e); }).then(function () { busy(b, false); });
 };
 function openLab() {

@@ -92,6 +92,7 @@
     return call('isleSave', { code: a.code, seat: a.seat, pin: a.pin, data: data }, keep && data.length < 60000).then(function (r) {
       ls(SK, data); busy = false; keepServer(r); mirror();
       if (r && (r.xp > 0 || r.hatch > 0)) gain(r);
+      if (r && r.mission && r.mission.finished) misDone(r.mission);
       return r;
     }, function (e) { busy = false; return null; });
   }
@@ -119,6 +120,12 @@
     if (r.xp > 0) bits.push('經驗 +' + r.xp);
     if (r.hatch > 0) bits.push('蛋孵化 +' + r.hatch + '%');
     toast('科學島練功：理化獸' + bits.join('、') + (r.levelUps ? '，升級了！' : '') + (r.left > 0 ? '<br><small>今天已換滿 ' + r.cap + ' 經驗，剩下的明天再領</small>' : ''), 4200);
+  }
+
+  /* 課堂任務（參觀科學島）完成 */
+  function misDone(g) {
+    var w = g.reward || {}, txt = w.kind === 'hatch' ? '蛋孵化 +' + w.amount + '%' : '經驗 +' + w.amount;
+    setTimeout(function () { toast('<b>課堂任務完成！</b>理化獸獲得 ' + txt + '<br><small>回到對戰吧的研究室就能看到</small>', 5200); }, 1500);
   }
 
   /* 科學島上的小名牌：回到對戰吧（學生從對戰吧登入、登出） */
@@ -170,7 +177,7 @@
     } catch (e) {}
     return w.slice(0, 40);
   }
-  function beat() { var a = auth(); if (!a || page === 'hatch') return; call('ping', { code: a.code, seat: a.seat, pin: a.pin, where: whereIsle(), act: Date.now() - lastAct, vis: !document.hidden }).catch(function () {}); }
+  function beat() { var a = auth(); if (!a || page === 'hatch') return; call('ping', { code: a.code, seat: a.seat, pin: a.pin, where: whereIsle(), act: Date.now() - lastAct, vis: !document.hidden }).then(function (r) { if (r && r.misGain) misDone(r.misGain); }).catch(function () {}); }
   setTimeout(beat, 3000); setInterval(beat, 60000);
   document.addEventListener('visibilitychange', beat);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
