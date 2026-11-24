@@ -672,6 +672,46 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 
 .hs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;width:100%;max-height:52vh;overflow:auto;padding:4px}.hs-cell{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:12px;background:var(--surface2,#f4f4f6)}.hs-cell img{width:64px;height:64px;object-fit:contain;image-rendering:pixelated}.hs-cell b{font-size:13px}.hs-cell small{font-size:11px;color:var(--muted,#888)}.hs-seat{font-size:11px;color:var(--muted,#888)}.hs-cell em{font-style:normal;font-size:11px;color:#c05000}
 .mis-tg{list-style:none;margin:0;padding:0;display:grid;gap:6px}.mis-tg li{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.06);font-size:14px}.mis-tg li b{white-space:nowrap;font-weight:600;opacity:.75}.mis-tg li.ok b{color:#34c759;opacity:1}
+/* ---- 戰場畫面（手機）：白板作戰、同學對戰 ---- */
+#bf{position:fixed;inset:0;z-index:1950;background:radial-gradient(120% 70% at 50% 0,#2a1f4a 0,#120d22 60%);color:#fff;overflow:auto;padding:max(14px,env(safe-area-inset-top)) 14px max(18px,env(safe-area-inset-bottom))}
+#bf[hidden]{display:none}
+.bf-box{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.bf-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.bf-top b{font-size:15px;letter-spacing:.04em;opacity:.8}
+.bf-top .btn{padding:6px 12px;font-size:14px}
+.bf-me{border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:14px;background:#2b2140}
+.bf-me.A{background:linear-gradient(135deg,#1f5fae,#3d8ee0)}.bf-me.B{background:linear-gradient(135deg,#a8321f,#e0583d)}
+.bf-me img{width:72px;height:72px;object-fit:contain;flex:none;image-rendering:pixelated}
+.bf-me h2{margin:0;font-size:24px;line-height:1.2}.bf-me p{margin:2px 0 0;font-size:14px;opacity:.9}
+.bf-st{border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.08);font-size:16px;line-height:1.5;text-align:center}
+.bf-st.go{background:#f2c14e;color:#2a1a00;font-weight:800;animation:bfpulse 1s ease-in-out infinite alternate}
+.bf-st.win{background:linear-gradient(135deg,#f2c14e,#ffdf8a);color:#2a1a00;font-weight:800;font-size:20px}
+.bf-st.lose{background:rgba(255,255,255,.12);font-weight:700;font-size:18px}
+@keyframes bfpulse{to{transform:scale(1.02);box-shadow:0 0 24px rgba(242,193,78,.6)}}
+.bf-teams{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bf-col{border-radius:14px;padding:10px;background:rgba(255,255,255,.05);display:flex;flex-direction:column;gap:6px;min-width:0}
+.bf-col h3{margin:0 0 2px;font-size:14px;display:flex;justify-content:space-between}.bf-col.A h3{color:#9cd0ff}.bf-col.B h3{color:#ffb09e}
+.bf-u{display:grid;grid-template-columns:40px 1fr;gap:2px 8px;align-items:center;padding:6px;border-radius:10px;background:rgba(0,0,0,.18);font-size:12.5px;position:relative}
+.bf-u img{grid-row:span 2;width:40px;height:40px;object-fit:contain}
+.bf-u span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bf-u .hp{height:7px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden}.bf-u .hp i{display:block;height:100%;background:#5fd27a;transition:width .4s}
+.bf-u .hp i.low{background:#ff6a4d}
+.bf-u.me{box-shadow:0 0 0 2px #f2c14e}.bf-u.me::after{content:'你';position:absolute;top:-6px;right:-4px;background:#f2c14e;color:#2a1a00;font-weight:800;font-size:11px;border-radius:8px;padding:0 6px}
+.bf-u.act{background:rgba(242,193,78,.25)}.bf-u.dead{opacity:.35;filter:grayscale(1)}
+.bf-u .pips{display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle}.bf-u .pips i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.25)}.bf-u .pips i.on{background:#f2c14e}
+.bf-wait{font-size:13px;opacity:.7;padding:4px 2px}
+.bf-foot{font-size:13px;opacity:.7;text-align:center;line-height:1.5}
+.bf-act{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#rc-bar{cursor:pointer}
+.rc-track.def .ball{background:#47a3f0;box-shadow:0 0 16px #47a3f0}
+/* 競技場：線上燈號、白板與私人對戰 */
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#8a8a94;flex:none;vertical-align:middle}.dot.on{background:#30d158;box-shadow:0 0 8px #30d158}
+.ar-sec{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1)}
+.ar-sec h3{margin:0;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ar-room{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.06)}
+.ar-room .pinfo{flex:1 1 150px;min-width:0}
+.btn.red2{--b:#d8432c}
+.lobby{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lobby>div{border-radius:12px;padding:10px;background:rgba(255,255,255,.06);min-height:80px}.lobby h3{margin:0 0 6px;font-size:15px}.lobby .A h3{color:#9cd0ff}.lobby .B h3{color:#ffb09e}.lobby ul{margin:0;padding-left:18px;font-size:14px;line-height:1.7}
 </style>
 
 
@@ -757,11 +797,13 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
         <button class="btn ghost" id="b-scope">出題範圍</button>
         <button class="btn ghost" id="b-gear" title="同學對戰、白板對戰時，每位學生套用自己在科學島的服裝加成">服裝加成：開</button>
         <button class="btn orange" id="b-mis">本節任務</button>
+        <button class="btn" id="b-duel" title="開放一段時間，讓學生用自己的手機私下組隊對戰（不會出現在白板上）">私人對戰</button>
         <button class="btn" id="b-live" aria-pressed="false" title="每 20 秒更新一次：綠燈在操作、黃燈畫面開著但沒動或切走了、灰燈沒上線">課堂監控</button>
         <button class="btn ghost" id="b-refresh" aria-label="重新整理">重新整理</button>
       </div>
     </div>
     <div class="misbar" id="b-misbar" hidden></div>
+    <div class="misbar" id="b-duelbar" hidden></div>
     <div class="livebar" id="b-livebar" hidden></div>
     <div class="mons" id="b-grid"></div>
   </section>
@@ -802,8 +844,8 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 <div class="ov" id="ov" hidden><div class="ov-box" id="ov-box" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<div id="rc-ov" hidden></div><div id="rc-bar" hidden>白板作戰進行中・輪到你的時候這裡會出現畫面</div>
-<script src="stand.js?v=20261124a"></script>
+<div id="bf" hidden></div><div id="rc-ov" hidden></div><div id="rc-bar" hidden role="button" tabindex="0">戰鬥進行中・點這裡回到戰場</div>
+<script src="stand.js?v=20261124b"></script>
 <script></script>
 <script></script>
 <script>
@@ -838,7 +880,7 @@ function sstore(k, v) { try { if (v === undefined) return sessionStorage.getItem
 function store(k, v) { try { if (v === undefined) return localStorage.getItem('hatch-' + k); localStorage.setItem('hatch-' + k, v); } catch (e) { return null; } }
 
 /* ---------- 共用畫面工具 ---------- */
-var S = { tok: '', role: '', staff: null, teachers: [], board: null, select: false, picked: {}, auth: null, me: null, daily: null, qi: 0, bank: null, clsName: '', battlesLeft: 3, cqSkip: [], cq: null, after: [] };
+var S = { tok: '', role: '', staff: null, teachers: [], board: null, select: false, picked: {}, auth: null, me: null, daily: null, qi: 0, bank: null, clsName: '', battlesLeft: 5, cqSkip: [], cq: null, after: [] };
 function tint(el) { var r = document.documentElement.style; if (el && EL[el]) { r.setProperty('--accent', EL[el].color); r.setProperty('--accent-ink', el === 'wood' || el === 'elec' || el === 'earth' ? '#1b1405' : '#fff'); } else { r.removeProperty('--accent'); r.removeProperty('--accent-ink'); } }
 function show(id) {
   ['v-home', 'v-tlogin', 'v-classes', 'v-board', 'v-slogin', 'v-lab', 'v-quiz'].forEach(function (v) { $('#' + v).hidden = v !== id; });
@@ -852,7 +894,7 @@ function renderWho(id) {
     html = '<span>' + esc(S.clsName) + ' ' + S.auth.seat + ' 號</span><button class="btn ghost sm" id="w-out">登出</button>';
   }
   w.innerHTML = html;
-  var o = $('#w-out'); if (o) o.onclick = function () { if (S.auth && window.SciSync) SciSync.logout(); if (S.tok) { call('logout', { tok: S.tok }).catch(function () {}); sstore('tok', ''); } S.tok = ''; S.role = ''; S.staff = null; S.auth = null; S.select = false; S.picked = {}; renderSelbar(); show('v-home'); };
+  var o = $('#w-out'); if (o) o.onclick = function () { if (S.auth) rtStop(); if (S.auth && window.SciSync) SciSync.logout(); if (S.tok) { call('logout', { tok: S.tok }).catch(function () {}); sstore('tok', ''); } S.tok = ''; S.role = ''; S.staff = null; S.auth = null; S.select = false; S.picked = {}; renderSelbar(); show('v-home'); };
   var c = $('#w-classes'); if (c) c.onclick = function () { S.select = false; S.picked = {}; renderSelbar(); teacherHome(); };
 }
 function toast(t) { var el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { el.hidden = true; }, 2600); }
@@ -1101,7 +1143,7 @@ function renderBoard() {
     };
   });
   d.students.forEach(function (m) { if (isAnimated(m)) mountAnim('bd-' + m.seat, { scale: 1.45, baseline: 0.95 }); });
-  renderSelbar(); renderMisBar();
+  renderSelbar(); renderMisBar(); renderDuelBar();
 }
 $('#b-refresh').onclick = function () { refreshBoard(this); };
 /* ---------- 課堂任務 ---------- */
@@ -1125,6 +1167,27 @@ function renderMisBar() {
   MIS.timer = setInterval(function () { if (!S.board || $('#v-board').hidden || S.select) return clearInterval(MIS.timer);
     call('board', { tok: S.tok, code: S.board.cls.code }).then(function (d) { S.board = d; renderBoard(); if (LIVE.on) liveTick(); }).catch(function () {}); }, 30000);
 }
+/* ---------- 私人對戰：老師開放一段時間，學生用自己的手機組隊對打 ---------- */
+function renderDuelBar() {
+  var bar = $('#b-duelbar'), d = S.board && S.board.cls.duel;
+  if (!d || d.until <= Date.now()) { bar.hidden = true; $('#b-duel').textContent = '私人對戰'; return; }
+  bar.hidden = false; $('#b-duel').textContent = '私人對戰 開放中';
+  bar.innerHTML = '<div><b>私人組隊對戰開放中</b><span class="small muted">　學生可以用自己的手機開房間、找同學對打，不會出現在白板上</span></div><span class="misclock" data-ends="' + d.until + '">' + mmss(d.until) + '</span><button class="btn ghost sm" id="duel-more">延長</button><button class="btn ghost sm" id="duel-end">結束開放</button>';
+  $('#duel-more').onclick = duelEditor;
+  $('#duel-end').onclick = function () { duelSet(0, this); };
+}
+function duelSet(min, btn) {
+  busy(btn, true, '');
+  call('duelSet', { tok: S.tok, code: S.board.cls.code, minutes: min }).then(function (d) { S.board = d; closeOv(); renderBoard(); toast(min ? '已開放私人對戰 ' + min + ' 分鐘' : '私人對戰已結束開放'); }).catch(function (e) { toast(e.message); busy(btn, false); });
+}
+function duelEditor() {
+  openOv('<div class="ov-head"><h2>開放私人對戰</h2><button class="x" aria-label="關閉">×</button></div>' +
+    '<p style="margin:0">開放的這段時間，學生可以在自己的手機開房間，找同學分成藍隊、紅隊對打（每隊最多 5 人），戰鬥不會出現在白板上。</p>' +
+    '<p class="small muted" style="margin:0">每場會用掉一次學生今天的挑戰（每天 5 次），還有次數的人才拿經驗；次數用完的人還是可以一起玩。時間到之後就不能再開新房間，已經開打的那一場會打完。同學之間一對一的 PK 邀請不受這個時段限制。</p>' +
+    '<div class="row"><span class="small"><b>開放多久</b></span>' + [10, 15, 20, 30, 45].map(function (n) { return '<button class="btn" data-dm="' + n + '">' + n + ' 分鐘</button>'; }).join('') + '</div>', 'wide');
+  $('#ov-box').querySelectorAll('[data-dm]').forEach(function (b) { b.onclick = function () { duelSet(Number(b.dataset.dm), b); }; });
+}
+$('#b-duel').onclick = duelEditor;
 /* 參觀任務：目標清單（舊版只有單一目標也轉成清單）與顯示文字 */
 function misTgts(m) { return m.targets || (m.isle ? [{ isle: m.isle, unit: m.unit || 0, need: m.unit ? 1 : m.goal }] : []); }
 function tgtName(t) { var c = (window.ISLE_CAT || {})[t.isle]; if (t.name) return t.name; if (!c) return t.isle; return c.n + (t.unit ? '・' + c.u[t.unit - 1] : t.need >= c.u.length ? '（全島 ' + c.u.length + ' 枚章）' : '（' + t.need + ' 枚章）'); }
@@ -1267,6 +1330,8 @@ var BEAT = { last: Date.now(), timer: 0 };
 ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, function () { BEAT.last = Date.now(); }, { passive: true, capture: true }); });
 function whereNow() {
   if (document.querySelector('.btframe')) { BEAT.last = Date.now(); return '對戰中'; }
+  if (DU.me && DU.me.role === 'guest') { BEAT.last = Date.now(); return '同學對戰中'; }
+  if (RCs.inField) { BEAT.last = Date.now(); return '白板作戰中'; }
   var v = ['v-lab', 'v-quiz'].filter(function (id) { return !$('#' + id).hidden; })[0];
   return v === 'v-quiz' ? '每日訓練答題' : v === 'v-lab' ? '理化獸研究室' : '對戰吧首頁';
 }
@@ -1575,10 +1640,11 @@ function renderLab(keepArena) {
   var any = me.hatchedCount > 0;
   $('#lab-arena').innerHTML = '<div class="row" style="justify-content:space-between"><h2 style="margin:0">理化獸競技場</h2><span class="pill">今天還能挑戰 ' + S.battlesLeft + ' 次</span></div>' +
     (any ? '<p class="small muted" style="margin:0">題目來自自然科學島題庫。出手前先答一題集氣，看準時機攻擊、球來了就防守。勝利每隻出戰的理化獸 +15 XP，輸了也有 +5 XP。</p>' +
-      '<div class="row"><button class="btn big" id="a-mates"' + (S.battlesLeft ? '' : ' disabled') + '>挑戰同學</button></div>'
-      : '<p class="muted small" style="margin:0">蛋孵化之後就能挑戰同學。</p>');
+      '<div class="row"><button class="btn big" id="a-mates"' + (S.battlesLeft ? '' : ' disabled') + '>挑戰同學</button><span class="small" id="a-online"></span></div>'
+      : '<p class="muted small" style="margin:0">蛋孵化之後就能挑戰同學。</p>') +
+    '<div class="ar-sec" id="a-wb" hidden></div><div class="ar-sec" id="a-duel" hidden></div>';
   if ($('#a-mates')) { $('#a-mates').onclick = function () { arenaPick(this); }; }
-  if (window.fbRoom) { var wbx = document.createElement('div'); wbx.className = 'row'; wbx.innerHTML = '<button class="btn" id="a-wb" type="button"></button>'; $('#lab-arena').appendChild(wbx); rcStart(); rcLabel(); }
+  if (window.fbRoom) { rcStart(); rcLabel(); duRender(); duOnline(); }
 
   /* 學校網站版：到自然科學島練功 */
   var ic = $('#lab-isle');
@@ -1598,15 +1664,24 @@ function teamIcons(team) { return '<span class="ticons">' + team.map(function (t
 function arenaPick(btn) {
   busy(btn, true, '讀取中');
   call('arenaInfo', S.auth).then(function (d) {
-    S.battlesLeft = d.battlesLeft;
-    var html = '<div class="ov-head"><h2>' + '挑戰同學' + '</h2><button class="x" aria-label="關閉">×</button></div><p class="small muted" style="margin:0">今天還能挑戰 ' + d.battlesLeft + ' 次。按下「開始戰鬥」才算一次，在出戰準備畫面離開不扣次數。</p><div class="pick">';
-      html += d.mates.length ? d.mates.map(function (o) { var top = o.team.reduce(function (a, t) { return Math.max(a, t.lv); }, 0); return '<div class="prow"><b class="num seatno">' + o.seat + '</b><div class="pinfo"><b>' + o.seat + ' 號 ' + esc(o.name) + '</b><span class="small muted">' + o.team.length + ' 隻・最高 Lv' + top + '</span></div>' + teamIcons(o.team) + '<button class="btn sm" data-opp="' + o.seat + '">挑戰</button></div>'; }).join('')
-        : '<p class="muted">班上還沒有其他同學的理化獸孵化。</p>';
-    openOv(html + '</div>', 'wide');
-    $('#ov-box').querySelectorAll('[data-opp]').forEach(function (b) {
-      b.onclick = function () { startBattle({ kind: 'pvp', opp: Number(b.dataset.opp) }, b); };
-    });
+    S.battlesLeft = d.battlesLeft; DU.mates = d.mates;
+    openOv('<div class="ov-head"><h2>挑戰同學</h2><button class="x" aria-label="關閉">×</button></div><p class="small muted" style="margin:0" id="ap-note"></p><div class="pick" id="ap-list"></div>', 'wide');
+    arenaRows();
   }).catch(function (e) { toast(e.message); }).then(function () { busy(btn, false); });
+}
+function arenaRows() {
+  var box = $('#ap-list'); if (!box || !DU.mates) return;
+  var live = !!(window.fbRoom && window.fbRoom.D && DU.ok && DU.on), on = DU.online || {};
+  $('#ap-note').innerHTML = '今天還能挑戰 ' + S.battlesLeft + ' 次。' + (live ? '<span class="dot on"></span> 亮綠燈的同學現在在線上，可以邀請他 PK，兩個人各用自己的手機對打。其他同學按「挑戰」，由電腦代替他出招。' : '按「挑戰」由電腦代替同學出招。') + '按下「開始戰鬥」才算一次，在準備畫面離開不扣次數。';
+  var isOn = function (s) { return live && on[s] !== undefined; };
+  var list = DU.mates.slice().sort(function (a, b) { return isOn(b.seat) - isOn(a.seat) || a.seat - b.seat; });
+  box.innerHTML = list.length ? list.map(function (o) {
+    var top = o.team.reduce(function (a, t) { return Math.max(a, t.lv); }, 0), g = isOn(o.seat);
+    return '<div class="prow"><b class="num seatno">' + o.seat + '</b><div class="pinfo"><b>' + (live ? '<span class="dot' + (g ? ' on' : '') + '" title="' + (g ? '在線上' : '不在線上') + '"></span> ' : '') + o.seat + ' 號 ' + esc(o.name) + '</b><span class="small muted">' + (g ? '在線上・' : '') + o.team.length + ' 隻・最高 Lv' + top + '</span></div>' + teamIcons(o.team) +
+      (g ? '<button class="btn sm orange" data-pk="' + o.seat + '">邀請 PK</button><button class="btn sm ghost" data-opp="' + o.seat + '">電腦代打</button>' : '<button class="btn sm" data-opp="' + o.seat + '">挑戰</button>') + '</div>';
+  }).join('') : '<p class="muted">班上還沒有其他同學的理化獸孵化。</p>';
+  box.querySelectorAll('[data-opp]').forEach(function (b) { b.onclick = function () { startBattle({ kind: 'pvp', opp: Number(b.dataset.opp) }, b); }; });
+  box.querySelectorAll('[data-pk]').forEach(function (b) { b.onclick = function () { var s = Number(b.dataset.pk), o = DU.mates.filter(function (x) { return x.seat === s; })[0]; closeOv(); pkInvite(s, o ? o.name : ''); }; });
 }
 
 /* ---------- 對戰畫面（iframe，競技島的對戰系統） ---------- */
@@ -1621,7 +1696,7 @@ function openBattle(cfg, handlers) {
   document.body.appendChild(f); document.body.classList.add('battling');
   BT = { f: f, h: handlers || {} };
 }
-function closeBattle() { if (BT) { BT.f.remove(); BT = null; document.body.classList.remove('battling'); } }
+function closeBattle() { if (BT) { BT.f.remove(); BT = null; document.body.classList.remove('battling'); } setTimeout(function () { bfRender(); duInvite(); }, 0); }
 window.addEventListener('message', function (e) {
   if (!BT || e.source !== BT.f.contentWindow) return;
   var d = e.data || {}, h = BT.h;
@@ -1666,10 +1741,10 @@ function revealEgg(m) {
 $('#b-battle').onclick = function () {
   var btn = this, code = S.board.cls.code, FBR = window.fbRoom; busy(btn, true, '讀取中');
   call('teacherRoster', { tok: S.tok, code: code }).then(function (r) {
-    var events = [], lastJ = { seats: [], pressed: [] }, stopW = null;
+    var events = [], lastJ = { seats: [], pressed: [], sides: {} }, stopW = null;
     var go = function () {
       openBattle({ mode: 'teacher', roster: r.roster, questions: r.questions, canAward: true, xpWin: r.xpWin, xpLose: r.xpLose, remote: !!FBR, joined: [], pressed: [] }, {
-        'cb-ready': function () { reply({ t: 'cb-joined', seats: lastJ.seats, pressed: lastJ.pressed }); },
+        'cb-ready': function () { reply({ t: 'cb-joined', seats: lastJ.seats, pressed: lastJ.pressed, sides: lastJ.sides }); },
         'cb-remote': function (d) { FBR.T.turn(code, d).then(function (v) { reply({ t: 'cb-remote-res', id: d.id, v: v }); }); },
         'cb-state': function (d) { FBR.T.state(code, d).catch(function () {}); },
         'cb-award': function (d) {
@@ -1679,37 +1754,65 @@ $('#b-battle').onclick = function () {
         },
         close: function () { if (stopW) stopW(); if (FBR) FBR.T.close(code).catch(function () {}); renderBoard(); if (events.length) playEvents(events); }
       });
-      if (FBR) stopW = FBR.T.watch(code, function (d) { lastJ = { seats: d.online, pressed: d.pressed }; reply({ t: 'cb-joined', seats: d.online, pressed: d.pressed }); });
+      if (FBR) stopW = FBR.T.watch(code, function (d) { lastJ = { seats: d.online, pressed: d.pressed, sides: d.sides }; reply({ t: 'cb-joined', seats: d.online, pressed: d.pressed, sides: d.sides }); });
     };
     if (FBR) FBR.T.reset(code).then(go, function (e) { toast('同學的手機暫時連不上，先用白板操作。'); FBR = null; go(); }); else go();
   }).catch(function (e) { toast(e.message); }).then(function () { busy(btn, false); });
 };
 
-/* ---------- 學生手機：白板作戰遙控 ---------- */
-var RCs = { on: false, open: false, state: null, joined: false, handled: {}, hb: null, cur: null, timer: null };
+/* ---------- 學生手機：白板作戰（加入藍隊／紅隊、戰場畫面、輪到自己時操作） ---------- */
+var RCs = { on: false, open: false, state: null, side: '', inField: false, handled: {}, hb: null, cur: null, curCh: null, timer: null, min: false, stop: null };
+function myName() { return (S.me && S.me.name) || ''; }
+function buzz() { if (navigator.vibrate) try { navigator.vibrate([120, 60, 120]); } catch (e) {} }
+function stateHas(st, seat) { return !!(st && st.units && st.units.some(function (u) { return u.seat === seat; })); }
 function rcLabel() {
-  var b = $('#a-wb'); if (!b) return;
-  b.textContent = RCs.joined ? '已加入，等老師開始（按一下退出）' : RCs.open ? '加入白板作戰' : '加入白板作戰（老師還沒開放）';
-  b.classList.toggle('green', !!RCs.joined);
-  var bar = $('#rc-bar'), mine = RCs.state && RCs.state.phase === 'battle' && (RCs.state.seats || []).indexOf(S.auth && S.auth.seat) >= 0;
-  if (bar) { bar.hidden = !(mine && !RCs.cur); }
+  var box = $('#a-wb');
+  if (box) {
+    if (!RCs.open) box.hidden = true;
+    else {
+      var can = S.me && S.me.hatchedCount > 0, sd = RCs.side, inF = RCs.inField, other = sd === 'A' ? '紅隊' : '藍隊';
+      box.hidden = false;
+      box.innerHTML = '<h3><span class="dot on"></span>白板作戰開放中</h3>' +
+        (!can ? '<p class="small muted" style="margin:0">蛋孵化之後才能上場。</p>'
+          : sd ? '<p class="small" style="margin:0">你已加入<b>' + (sd === 'A' ? '藍隊' : '紅隊') + '</b>' + (inF ? '，已經站上戰場。' : '，等老師開始。') + '</p><div class="row"><button class="btn" id="wb-view">打開戰場畫面</button>' + (RCs.state && RCs.state.phase === 'battle' ? '' : '<button class="btn ghost" id="wb-sw">換到' + other + '</button>') + '<button class="btn ghost" id="wb-out">退出</button></div>'
+          : inF ? '<p class="small" style="margin:0">老師把你排上戰場了。</p><div class="row"><button class="btn" id="wb-view">打開戰場畫面</button></div>'
+          : '<p class="small muted" style="margin:0">選一隊加入。老師開始後輪到你，手機會跳出答題和攻防畫面。</p><div class="row"><button class="btn" data-wbj="A">加入藍隊</button><button class="btn red2" data-wbj="B">加入紅隊</button></div>');
+      box.querySelectorAll('[data-wbj]').forEach(function (b) { b.onclick = function () { wbJoin(b.dataset.wbj); }; });
+      var v = $('#wb-view'); if (v) v.onclick = function () { RCs.min = false; bfRender(); };
+      var w = $('#wb-sw'); if (w) w.onclick = function () { wbJoin(sd === 'A' ? 'B' : 'A'); };
+      var o = $('#wb-out'); if (o) o.onclick = function () { wbJoin(''); };
+    }
+  }
+  bfRender();
+}
+function wbJoin(side) {
+  if (!RCs.open) { toast('老師還沒有開放白板作戰。'); return; }
+  RCs.min = false;
+  window.fbRoom.S.join(!!side, myName(), side).then(function () { if (side) window.fbRoom.S.beat(); }).catch(function (er) { toast('加入失敗：' + er.message); });
 }
 function rcStart() {
   if (!window.fbRoom || RCs.on || !S.auth) return; RCs.on = true;
-  window.fbRoom.S.watch({
-    open: function (v) { RCs.open = !!v; if (v) window.fbRoom.S.beat(); else RCs.joined = false; rcLabel(); },
-    state: function (v) { RCs.state = v; rcLabel(); },
-    joined: function (v) { RCs.joined = v; rcLabel(); },
-    turn: function (t) { if (!t) { if (!RCs.sent) rcClose(); return; } RCs.sent = false; if (t.seat === S.auth.seat && !RCs.handled[t.id]) rcTurn(t); }
+  RCs.stop = window.fbRoom.S.watch({
+    open: function (v) { RCs.open = !!v; if (v) window.fbRoom.S.beat(); else { RCs.side = ''; RCs.state = null; RCs.inField = false; } rcLabel(); },
+    state: function (v) { var was = RCs.inField; RCs.state = v; RCs.inField = stateHas(v, S.auth.seat); if (RCs.inField && !was) { RCs.min = false; buzz(); } rcLabel(); },
+    joined: function (v) { RCs.side = v ? (v.side === 'B' ? 'B' : 'A') : ''; rcLabel(); },
+    turn: onTurn(window.fbRoom.S)
   });
   RCs.hb = setInterval(function () { if (RCs.open && !document.hidden) window.fbRoom.S.beat(); }, 8000);
+  duStart();
 }
-function rcClose() { clearInterval(RCs.timer); RCs.cur = null; RCs.sent = false; var o = $('#rc-ov'); if (o) o.hidden = true; rcLabel(); }
+function onTurn(ch) {
+  return function (t) {
+    if (!t) { if (!RCs.sent && RCs.curCh === ch) rcClose(); return; }
+    RCs.sent = false; if (t.seat === S.auth.seat && !RCs.handled[t.id]) { t._ch = ch; rcTurn(t); }
+  };
+}
+function rcClose() { clearInterval(RCs.timer); clearTimeout(RCs.timer); RCs.cur = null; RCs.curCh = null; RCs.sent = false; var o = $('#rc-ov'); if (o) o.hidden = true; bfRender(); }
 function rcShow(html) { var o = $('#rc-ov'); o.hidden = false; o.innerHTML = '<div class="rc-box">' + html + '</div>'; }
 function rcSend(t, v, msg) {
-  window.fbRoom.S.resp(t.id, v).catch(function () {});
+  t._ch.resp(t.id, v).catch(function () {});
   clearInterval(RCs.timer); RCs.sent = true;
-  rcShow('<h2>' + esc(msg || '已送出') + '</h2><p class="muted">看老師的白板。</p>');
+  rcShow('<h2>' + esc(msg || '已送出') + '</h2><p class="muted">看戰場上的結果。</p>');
   setTimeout(function () { if (RCs.cur === t.id) rcClose(); }, 1500);
 }
 function rcTimer(t, sec, fn) {
@@ -1718,7 +1821,7 @@ function rcTimer(t, sec, fn) {
   RCs.timer = setInterval(function () { left--; el(); if (left <= 0) { clearInterval(RCs.timer); fn(); } }, 1000);
 }
 function rcTurn(t) {
-  RCs.handled[t.id] = 1; RCs.cur = t.id; window.fbRoom.S.ack(t.id).catch(function () {});
+  RCs.handled[t.id] = 1; RCs.cur = t.id; RCs.curCh = t._ch; t._ch.ack(t.id).catch(function () {});
   var d = t.data || {}; $('#rc-bar').hidden = true;
   if (navigator.vibrate) try { navigator.vibrate(120); } catch (e) {}
   if (t.kind === 'q') {
@@ -1747,7 +1850,7 @@ function rcTurn(t) {
     menu();
   } else if (t.kind === 'atk' || t.kind === 'def') {
     var p = d.p || { period: 800, perfect: .15, good: .35 }, atk = t.kind === 'atk';
-    rcShow('<div class="rc-head"><b>' + (atk ? '攻擊！看準時機點一下' : '快防守！看準時機點一下') + '</b></div><div class="rc-track" id="rc-track"><i class="z g" style="width:' + (p.good * 100) + '%"></i><i class="z p" style="width:' + (p.perfect * 100) + '%"></i><i class="ball" id="rc-ball"></i></div><p class="muted small">球在中間的亮區時點畫面任何地方</p>');
+    rcShow('<div class="rc-head"><b>' + (atk ? '攻擊！看準時機點一下' : '快防守！看準時機點一下') + '</b></div><div class="rc-track' + (atk ? '' : ' def') + '" id="rc-track"><i class="z g" style="width:' + (p.good * 100) + '%"></i><i class="z p" style="width:' + (p.perfect * 100) + '%"></i><i class="ball" id="rc-ball"></i></div><p class="muted small">球在中間的亮區時點畫面任何地方</p>');
     var t0 = performance.now(), ph = Math.random() * Math.PI * 2, x = 0, stopped = false, raf;
     var tr = $('#rc-track'), ball = $('#rc-ball');
     var frame = function (now) { if (stopped) return; x = Math.sin(ph + (now - t0) / p.period * Math.PI); var W = tr.clientWidth; ball.style.left = (W / 2 + x * (W / 2 - 14)) + 'px'; raf = requestAnimationFrame(frame); };
@@ -1761,12 +1864,274 @@ function rcTurn(t) {
     clearInterval(RCs.timer); RCs.timer = setTimeout(function () { if (!stopped) { stopped = true; cancelAnimationFrame(raf); rcClose(); } }, 12000);
   }
 }
-document.addEventListener('click', function (e) {
-  var b = e.target.closest && e.target.closest('#a-wb'); if (!b) return;
-  if (!RCs.open && !RCs.joined) { toast('老師還沒有開放加入白板作戰。'); return; }
-  window.fbRoom.S.join(!RCs.joined, S.me && S.me.name).catch(function (er) { toast('加入失敗：' + er.message); });
-});
+/* ---------- 戰場畫面（手機）：讓同學知道自己已經在戰場上 ---------- */
+function bfSrc() {
+  if (DU.me && DU.me.role === 'guest') return { k: 'duel', st: DU.me.state, side: DU.me.side, all: DU.me.all || {}, title: DU.me.kind === 'pk' ? 'PK 對戰' : '私人組隊對戰' };
+  if (RCs.open && (RCs.side || RCs.inField)) return { k: 'wb', st: RCs.state, side: RCs.side, title: '白板作戰' };
+  return null;
+}
+function bfUnit(u, me, act) {
+  var p = u.mx ? Math.max(0, Math.round(u.hp / u.mx * 100)) : 0, img = (window.STAND || {})[u.el + u.st] || '';
+  return '<div class="bf-u' + (u.seat === me ? ' me' : '') + (u.u === act ? ' act' : '') + (u.a ? '' : ' dead') + '">' + (img ? '<img src="' + img + '" alt="">' : '<span></span>') +
+    '<span><b class="num">' + u.seat + '</b> ' + esc(u.m) + ' <span class="num">Lv' + u.lv + '</span><span class="pips">' + [0, 1, 2].map(function (i) { return '<i class="' + (i < u.g ? 'on' : '') + '"></i>'; }).join('') + '</span></span>' +
+    '<div class="hp"><i class="' + (p < 35 ? 'low' : '') + '" style="width:' + p + '%"></i></div></div>';
+}
+function bfRender() {
+  var o = $('#bf'), bar = $('#rc-bar'); if (!o || !bar) return;
+  var src = S.auth ? bfSrc() : null, min = src && (src.k === 'duel' ? DU.min : RCs.min), busyBt = !!document.querySelector('.btframe');
+  o.hidden = !src || min || busyBt;
+  bar.hidden = !(src && min) || !!RCs.cur || busyBt;
+  if (o.hidden) return;
+  var me = S.auth.seat, st = src.st || null, units = st && st.units || [], mine = units.filter(function (u) { return u.seat === me; });
+  var side = mine.length ? mine[0].s : src.side, phase = st ? st.phase : 'setup', names = (st && st.names) || { A: '藍隊', B: '紅隊' };
+  var L = S.me && S.me.mons ? S.me.mons[S.me.lead] : null, heroImg = mine.length ? (window.STAND || {})[mine[0].el + mine[0].st] : L && L.hatched ? (window.STAND || {})[L.element + L.stage] : '';
+  var sideTxt = side === 'B' ? '紅隊' : '藍隊';
+  var hero = '<div class="bf-me ' + (side || '') + '">' + (heroImg ? '<img src="' + heroImg + '" alt="">' : '') + '<div><h2>' + (src.k === 'duel' && DU.me.kind === 'pk' ? '對手：' + esc(DU.me.host + ' 號 ' + DU.me.hn) : side ? '你在' + sideTxt : '你在戰場上') + '</h2><p>' +
+    (mine.length ? mine.map(function (u) { return esc(u.m); }).join('、') + (mine.length > 1 ? ' 一起上場' : ' 上場') : src.k === 'wb' ? '等老師把你排上場' : '等待開始') + '</p></div></div>';
+  var stTxt = '', stCls = '';
+  if (phase === 'end') {
+    var w = st.win, res = w === 'draw' ? '平手' : !side ? '' : w === side ? (src.k === 'duel' && DU.me.kind === 'pk' ? '你贏了！' : '你們贏了！') : '這次輸了，再接再厲';
+    stTxt = (w === 'draw' ? '平手！' : esc(names[w] || '') + '獲勝！') + (res && w !== 'draw' ? '<br>' + res : '') + (src.k === 'duel' && DU.me.res ? '<br><span style="font-size:15px">' + DU.me.res + '</span>' : '');
+    stCls = side && w === side ? 'win' : 'lose';
+  } else if (phase === 'battle') {
+    var a = units.filter(function (u) { return u.u === st.act; })[0];
+    if (a && a.seat === me) { stTxt = '輪到你了！看手機跳出來的題目和按鈕'; stCls = 'go'; }
+    else stTxt = '第 ' + (st.round || 1) + ' 輪' + (a ? '・輪到' + (a.s === 'A' ? '藍隊' : '紅隊') + ' ' + a.seat + ' 號 ' + esc(a.m) : '');
+  } else {
+    stTxt = src.k === 'wb' ? (mine.length ? '你已站上戰場，等老師按開始' : '你已加入' + sideTxt + '，等老師把你排上場')
+      : (st ? '對方正在排陣，等他按開始' : '等房主按開始（目前 ' + Object.keys(src.all).length + ' 人）');
+  }
+  var teams;
+  if (units.length) {
+    teams = ['A', 'B'].map(function (sd) {
+      var us = units.filter(function (u) { return u.s === sd; });
+      return '<div class="bf-col ' + sd + '"><h3><span>' + esc(names[sd] || (sd === 'A' ? '藍隊' : '紅隊')) + '</span><span class="num">' + us.filter(function (u) { return u.a; }).length + '/' + us.length + '</span></h3>' + (us.length ? us.map(function (u) { return bfUnit(u, me, st.act); }).join('') : '<div class="bf-wait">還沒有人</div>') + '</div>';
+    }).join('');
+  } else {
+    var g = { A: [], B: [] }; Object.keys(src.all || {}).forEach(function (s) { var x = src.all[s] || {}; g[x.side === 'B' ? 'B' : 'A'].push(s + ' 號 ' + esc(x.name || '')); });
+    teams = ['A', 'B'].map(function (sd) { return '<div class="bf-col ' + sd + '"><h3><span>' + (sd === 'A' ? '藍隊' : '紅隊') + '</span></h3>' + (g[sd].length ? g[sd].map(function (x) { return '<div class="bf-wait" style="opacity:.95">' + x + '</div>'; }).join('') : '<div class="bf-wait">' + (src.k === 'wb' ? '老師排陣中' : '還沒有人') + '</div>') + '</div>'; }).join('');
+  }
+  var acts = '';
+  if (src.k === 'wb') { if (RCs.side && phase !== 'battle') acts = '<button class="btn ghost" id="bf-sw">換到' + (RCs.side === 'A' ? '紅隊' : '藍隊') + '</button><button class="btn ghost" id="bf-out">退出白板作戰</button>'; }
+  else if (phase === 'end' || DU.me.closed) acts = '<button class="btn orange big" id="bf-out">回研究室</button>';
+  else acts = (DU.me.kind === 'team' && phase !== 'battle' ? '<button class="btn ghost" id="bf-sw">換到' + (DU.me.side === 'A' ? '紅隊' : '藍隊') + '</button>' : '') + '<button class="btn ghost" id="bf-out">' + (phase === 'battle' ? '離開（電腦會代打）' : '離開房間') + '</button>';
+  o.innerHTML = '<div class="bf-box"><div class="bf-top"><b>' + src.title + (phase === 'battle' ? '・第 ' + (st.round || 1) + ' 輪' : '') + '</b><button class="btn ghost" id="bf-min">縮小</button></div>' + hero +
+    '<div class="bf-st ' + stCls + '">' + stTxt + '</div><div class="bf-teams">' + teams + '</div>' +
+    (phase === 'end' ? '' : '<div class="bf-foot">輪到你的理化獸時，會跳出答題、選招和攻防按鈕。<br>手機請保持開著，不要鎖螢幕。</div>') + (acts ? '<div class="bf-act">' + acts + '</div>' : '') + '</div>';
+  $('#bf-min').onclick = function () { if (src.k === 'duel') DU.min = true; else RCs.min = true; bfRender(); };
+  var sw = $('#bf-sw'); if (sw) sw.onclick = function () { if (src.k === 'wb') wbJoin(RCs.side === 'A' ? 'B' : 'A'); else duSwitch(); };
+  var out = $('#bf-out'); if (out) out.onclick = function () {
+    if (src.k === 'wb') { wbJoin(''); return; }
+    if (phase === 'battle' && !out.dataset.arm) { out.dataset.arm = 1; out.textContent = '再按一次離開'; return; }
+    duClear();
+  };
+}
+$('#rc-bar').onclick = function () { RCs.min = false; DU.min = false; bfRender(); };
 
+/* ---------- 同學對戰：線上燈號、PK 邀請、私人組隊房間 ---------- */
+var DU = { on: false, ok: true, online: {}, invites: [], rooms: [], me: null, min: false, mates: null, inv: null, seen: {}, tick: 0, win: false, stop: null };
+function rulesMsg(e) { var m = String(e && e.message || e || ''); return /權限|permission/i.test(m) ? '同學對戰還沒啟用：請網管到 Firebase 更新資料庫規則。' : m; }
+function duStart() {
+  var F = window.fbRoom; if (!F || !F.D || DU.on || !S.auth) return; DU.on = true; DU.ok = true;
+  DU.stop = F.D.lobby({
+    name: myName(),
+    online: function (o) { DU.online = o; duOnline(); },
+    invites: function (l) { DU.invites = l; duInvite(); },
+    rooms: function (l) { DU.rooms = l; duRender(); },
+    fail: function () { if (!DU.ok) return; DU.ok = false; duRender(); duOnline(); }
+  });
+  DU.win = F.D.until() > F.D.now();
+  DU.tick = setInterval(function () { var on = F.D.until() > F.D.now(); if (on !== DU.win) { DU.win = on; duRender(); if (on) toast('老師開放私人組隊對戰了！'); } }, 3000);
+}
+function rtStop() {
+  if (DU.me) { if (DU.me.role === 'host') hostCancel(); else duClear(); }
+  if (DU.stop) DU.stop(); clearInterval(DU.tick); DU.on = false; DU.online = {}; DU.rooms = []; DU.invites = [];
+  if (RCs.stop) RCs.stop(); clearInterval(RCs.hb); RCs.on = false; RCs.open = false; RCs.side = ''; RCs.state = null; RCs.inField = false;
+  rcClose(); bfRender();
+}
+function duOnline() {
+  var n = Object.keys(DU.online).length, el = $('#a-online');
+  if (el) el.innerHTML = DU.ok ? '<span class="dot' + (n ? ' on' : '') + '"></span> 線上 ' + n + ' 人' : '';
+  if ($('#ap-list')) arenaRows();
+}
+/* 收到 PK 邀請 */
+function duInvite() {
+  var F = window.fbRoom;
+  if (DU.inv && !DU.invites.some(function (x) { return x.id === DU.inv.id; })) { DU.inv = null; if ($('#iv-no')) { closeOv(); toast('對方取消了邀請。'); } }
+  var inv = DU.invites.filter(function (x) { return !DU.seen[x.id]; }).sort(function (a, b) { return b.t - a.t; })[0];
+  if (!inv || DU.me || document.querySelector('.btframe') || (DU.inv && DU.inv.id === inv.id)) return;
+  DU.inv = inv; buzz();
+  var can = S.battlesLeft > 0 && S.me && S.me.hatchedCount > 0;
+  openOv('<div class="reveal"><h2>' + inv.from + ' 號 ' + esc(inv.n) + '<br>邀請你 PK！</h2><p class="muted" style="margin:0">' +
+    (can ? '兩個人各用自己的手機對打，帶你全部的理化獸上場。打完會用掉一次今天的挑戰。' : S.me && !S.me.hatchedCount ? '你的蛋還沒孵化，先完成每日訓練吧。' : '你今天的挑戰次數已經用完了，明天再來。') + '</p>' +
+    '<div class="row" style="justify-content:center">' + (can ? '<button class="btn orange big" id="iv-ok">接受</button>' : '') + '<button class="btn ghost big" id="iv-no">' + (can ? '下次吧' : '知道了') + '</button></div></div>', 'lock');
+  $('#iv-no').onclick = function () { DU.seen[inv.id] = 1; DU.inv = null; closeOv(); F.D.answer(inv.from, inv.id, false).catch(function () {}); };
+  var ok = $('#iv-ok'); if (ok) ok.onclick = function () {
+    DU.seen[inv.id] = 1; DU.inv = null; closeOv();
+    F.D.answer(inv.from, inv.id, true).then(function () { guestEnter({ id: inv.id, kind: 'pk', host: inv.from, hn: inv.n, side: 'B' }); }).catch(function (e) { toast(rulesMsg(e)); });
+  };
+}
+/* 加入別人的房間（PK 被邀請、或私人組隊） */
+function guestEnter(o) {
+  var F = window.fbRoom, P = F.D.player(o.id);
+  DU.me = { id: o.id, role: 'guest', kind: o.kind, host: o.host, hn: o.hn, side: o.side, P: P, state: null, all: {}, res: '', settled: false };
+  DU.min = false;
+  P.join(true, myName(), o.side).catch(function (e) { toast(rulesMsg(e)); duClear(); });
+  var w1 = P.watch({
+    state: function (v) { if (!DU.me || DU.me.id !== o.id) return; var was = stateHas(DU.me.state, S.auth.seat); DU.me.state = v; if (!was && stateHas(v, S.auth.seat)) buzz(); duSettle(); bfRender(); },
+    turn: onTurn(P),
+    all: function (v) { if (!DU.me || DU.me.id !== o.id) return; DU.me.all = v || {}; bfRender(); }
+  });
+  var w2 = F.D.watchRoom(o.id, { list: function (v) {
+    if (!DU.me || DU.me.id !== o.id) return;
+    if (v) { DU.me.seen = 1; return; }
+    if (!DU.me.seen) return;
+    if (DU.me.state && DU.me.state.phase === 'end') { DU.me.closed = 1; bfRender(); return; }
+    toast('房間已經關閉了。'); duClear();
+  } });
+  DU.me.stop = function () { w1(); w2(); };
+  bfRender(); duRender();
+}
+function duSwitch() {
+  var m = DU.me; if (!m || m.role !== 'guest') return;
+  var to = m.side === 'A' ? 'B' : 'A', n = Object.keys(m.all || {}).filter(function (s) { return (m.all[s] || {}).side === to; }).length;
+  if (n >= 5) { toast((to === 'A' ? '藍隊' : '紅隊') + '已經 5 個人了。'); return; }
+  m.side = to; m.P.join(true, myName(), to).catch(function () {}); bfRender();
+}
+function duClear() {
+  var m = DU.me; if (!m) return;
+  if (m.stop) m.stop();
+  if (m.role === 'guest' && m.P && !m.closed) m.P.join(false).catch(function () {});
+  DU.me = null; DU.min = false; rcClose(); bfRender(); duRender();
+  if (m.ev) revealAfter(m.ev);
+  if (!$('#v-lab').hidden) renderLab();
+}
+/* 參加者自己結算（開房的人在戰鬥畫面裡結算） */
+function duSettle() {
+  var m = DU.me, st = m && m.state; if (!m || m.settled || !st || st.phase !== 'end' || !st.win) return;
+  var mine = (st.units || []).filter(function (u) { return u.seat === S.auth.seat; });
+  if (!mine.length) return;
+  m.settled = true; m.res = '結算中…';
+  var sd = mine[0].s, result = st.win === 'draw' ? 'draw' : st.win === sd ? 'win' : 'lose';
+  call('duelEnd', Object.assign({ id: m.id, result: result, used: mine.map(function (u) { return u.mi; }) }, S.auth)).then(function (x) {
+    S.me = x.me; S.battlesLeft = x.battlesLeft; m.res = rewardTxt(x); m.ev = x; bfRender();
+  }).catch(function (e) { m.res = esc(e.message); bfRender(); });
+}
+function rewardTxt(x) {
+  if (!x.counted) return x.dup ? '這場已經結算過了' : '今天的挑戰次數用完了，這場不加經驗';
+  var ups = x.events.filter(function (e) { return e.levelUps; }).length;
+  return '出戰的理化獸每隻 +' + x.xpGain + ' XP' + (ups ? '・' + ups + ' 隻升級了！' : '');
+}
+function revealAfter(x) {
+  if (!x || !x.me) return;
+  var chain = Promise.resolve();
+  (x.events || []).forEach(function (ev) { if (ev.evolved) chain = chain.then(function () { return revealEvolve(x.me.mons[ev.i]); }); });
+  if (x.newEgg >= 0) chain = chain.then(function () { return revealEgg(x.me.mons[x.newEgg]); });
+}
+/* 發 PK 邀請（我開房、對方加入就開打） */
+function pkInvite(seat, name) {
+  var F = window.fbRoom;
+  if (DU.me) { toast('你已經在一場對戰裡了。'); return; }
+  if (S.battlesLeft <= 0) { toast('今天的挑戰次數用完了。'); return; }
+  var id = F.D.newId(), m = DU.me = { id: id, role: 'host', kind: 'pk', to: seat, toName: name, joined: {} };
+  F.D.open(id, { name: myName(), kind: 'pk', to: seat }).then(function () {
+    if (DU.me !== m) return;
+    openOv('<div class="reveal"><h2>已邀請 ' + seat + ' 號 ' + esc(name) + '</h2><p class="muted" style="margin:0">等對方在手機上按「接受」… <b class="num" id="pk-t">60</b> 秒</p><button class="btn ghost big" id="pk-x">取消邀請</button></div>', 'lock');
+    var left = 60; m.timer = setInterval(function () { left--; var t = $('#pk-t'); if (t) t.textContent = left; if (left <= 0) hostCancel('對方沒有回應，可能沒在看手機。'); }, 1000);
+    $('#pk-x').onclick = function () { hostCancel(); };
+    m.stop = F.D.watchRoom(id, {
+      joined: function (v) { if (DU.me !== m) return; m.joined = v; if (m.started) { hostJoined(m); return; } if (v[seat]) { clearInterval(m.timer); closeOv(); hostStart(); } },
+      ans: function (v) { if (v && v.ok === false && DU.me === m) hostCancel('對方說下次吧。'); }
+    });
+  }).catch(function (e) { if (DU.me === m) DU.me = null; F.D.shut(id, seat); toast(rulesMsg(e)); });
+}
+function hostCancel(msg) {
+  var m = DU.me; if (!m || m.role !== 'host') return;
+  clearInterval(m.timer); if (m.stop) m.stop(); window.fbRoom.D.shut(m.id, m.to);
+  DU.me = null; if ($('#pk-x') || $('#rm-x')) closeOv(); if (msg) toast(msg); duRender();
+}
+/* 私人組隊：開房間 */
+function roomOpen() {
+  var F = window.fbRoom;
+  if (DU.me) { toast('你已經在一場對戰裡了。'); return; }
+  var id = F.D.newId(), m = DU.me = { id: id, role: 'host', kind: 'team', joined: {} };
+  F.D.open(id, { name: myName(), kind: 'team' }).then(function () {
+    if (DU.me !== m) return;
+    m.stop = F.D.watchRoom(id, { joined: function (v) { if (DU.me !== m) return; m.joined = v; if (m.started) { hostJoined(m); return; } var c = sides(v); F.D.counts(id, c.A.length, c.B.length).catch(function () {}); roomOv(); } });
+    roomOv(); duRender();
+  }).catch(function (e) { if (DU.me === m) DU.me = null; F.D.shut(id); toast(rulesMsg(e)); });
+}
+function sides(j) { var g = { A: [], B: [] }; Object.keys(j || {}).forEach(function (s) { var o = j[s] || {}; g[o.side === 'B' ? 'B' : 'A'].push({ seat: Number(s), name: String(o.name || '') }); }); g.A.sort(function (a, b) { return a.seat - b.seat; }); g.B.sort(function (a, b) { return a.seat - b.seat; }); return g; }
+function roomOv() {
+  var m = DU.me; if (!m || m.role !== 'host' || m.kind !== 'team' || m.started || m.hide) return;
+  var g = sides(m.joined), ok = g.A.length && g.B.length && g.A.length <= 5 && g.B.length <= 5;
+  var li = function (x) { return '<li>' + x.seat + ' 號 ' + esc(x.name) + (x.seat === S.auth.seat ? '（你）' : '') + '</li>'; };
+  openOv('<div class="ov-head"><h2>我的對戰房間</h2><button class="x" aria-label="先關掉這個視窗">×</button></div>' +
+    '<p class="small muted" style="margin:0">同學在自己手機的「私人組隊對戰」看到你的房間，就能加入藍隊或紅隊。每隊最多 5 人，每人帶夥伴一隻上場。戰鬥在你這台跑，其他人用自己的手機操作。</p>' +
+    '<div class="lobby"><div class="A"><h3>藍隊 ' + g.A.length + ' 人</h3><ul>' + g.A.map(li).join('') + '</ul></div><div class="B"><h3>紅隊 ' + g.B.length + ' 人</h3><ul>' + (g.B.length ? g.B.map(li).join('') : '<li style="list-style:none;margin-left:-18px;opacity:.6">等同學加入</li>') + '</ul></div></div>' +
+    '<div class="row"><button class="btn orange big" id="rm-go"' + (ok ? '' : ' disabled') + '>開始戰鬥</button><button class="btn ghost" id="rm-x">關閉房間</button></div>' +
+    (g.A.length > 5 || g.B.length > 5 ? '<p class="small" style="margin:0;color:var(--bad)">每隊最多 5 人，請同學換隊或離開。</p>' : ''), 'wide');
+  $('#ov-box .x').onclick = function () { m.hide = 1; closeOv(); duRender(); };
+  $('#rm-go').onclick = function () { hostStart(); };
+  $('#rm-x').onclick = function () { hostCancel(); };
+}
+/* 戰鬥中有人離開房間（或關掉頁面）：他的理化獸馬上改由電腦操作，不用每次等手機 6 秒 */
+function hostJoined(m) { reply({ t: 'cb-joined', seats: Object.keys(m.joined || {}).map(Number).filter(function (s) { return s !== S.auth.seat; }), pressed: [], sides: {} }); }
+/* 開房的人：開始戰鬥（這台跑戰鬥，同學的手機負責操作） */
+function hostStart() {
+  var m = DU.me, F = window.fbRoom; if (!m || m.role !== 'host' || m.started) return; m.started = true;
+  var g = sides(m.joined), A = g.A.map(function (x) { return x.seat; }), B = g.B.map(function (x) { return x.seat; });
+  if (A.indexOf(S.auth.seat) < 0) A.unshift(S.auth.seat);
+  var guests = A.concat(B).filter(function (s) { return s !== S.auth.seat; });
+  var nm = function (s) { var o = (m.joined || {})[s] || {}; return s + ' 號' + (o.name ? ' ' + o.name : ''); };
+  closeOv();
+  F.D.setOpen(m.id, false).catch(function () {});
+  call('duelCfg', Object.assign({ A: A, B: B, full: m.kind === 'pk' }, S.auth)).then(function (r) {
+    if (DU.me !== m) return;
+    var pk = m.kind === 'pk', ch = F.D.host(m.id), res = null;
+    openBattle({ mode: 'duel', me: S.auth.seat, teamA: r.cfg.teamA, teamB: r.cfg.teamB, remote: true, joined: guests,
+      title: pk ? 'PK 對戰' : '私人組隊對戰', nameA: pk ? nm(S.auth.seat) : '藍隊', nameB: pk ? nm(B[0]) : '紅隊',
+      note: '同學用自己的手機操作。今天還有挑戰次數的人，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' }, {
+      'cb-remote': function (d) { ch.turn(d).then(function (v) { reply({ t: 'cb-remote-res', id: d.id, v: v }); }); },
+      'cb-state': function (d) { ch.state(d).catch(function () {}); },
+      'cb-end': function (d) {
+        var result = d.result === 'A' ? 'win' : d.result === 'B' ? 'lose' : 'draw';
+        call('duelEnd', Object.assign({ id: m.id, result: result, used: d.used || [] }, S.auth)).then(function (x) {
+          res = x; S.me = x.me; S.battlesLeft = x.battlesLeft;
+          reply({ t: 'cb-reward', html: '<span>' + esc(rewardTxt(x)) + '</span>' });
+        }).catch(function (e) { reply({ t: 'cb-reward', html: '<span>' + esc(e.message) + '</span>' }); });
+      },
+      close: function () { if (m.stop) m.stop(); F.D.shut(m.id, m.to); if (DU.me === m) DU.me = null; renderLab(); revealAfter(res); }
+    });
+  }).catch(function (e) { toast(e.message); m.started = false; hostCancel(); });
+}
+/* 競技場卡片：私人組隊對戰區 */
+function duRender() {
+  var box = $('#a-duel'), F = window.fbRoom; if (!box || !F || !F.D || !S.auth) return;
+  if (!DU.ok) { box.hidden = false; box.innerHTML = '<p class="small muted" style="margin:0">同學 PK、私人組隊對戰還沒啟用（網管要先更新資料庫規則）。</p>'; return; }
+  var until = F.D.until(), open = until > F.D.now(), mine = DU.me && DU.me.kind === 'team' ? DU.me : null;
+  if (!open && !mine) { box.hidden = true; return; }
+  box.hidden = false;
+  var rooms = DU.rooms.filter(function (r) { return r.kind === 'team' && r.open && Number(r.host) !== S.auth.seat; });
+  var can = S.me && S.me.hatchedCount > 0, ends = until - F.D.skew;
+  box.innerHTML = '<h3><span class="dot on"></span>私人組隊對戰' + (open ? '<span class="pill num" data-ends="' + ends + '">' + mmss(ends) + '</span>' : '') + '</h3>' +
+    '<p class="small muted" style="margin:0">老師開放的時間內，可以自己開房間、找同學分藍紅兩隊對打，不會出現在白板上。</p>' +
+    (mine ? (mine.role === 'host' ? '<div class="row"><button class="btn orange" id="du-mine">回到我的房間</button></div>' : '<p class="small" style="margin:0">你在 ' + mine.host + ' 號 ' + esc(mine.hn) + ' 的房間（' + (mine.side === 'A' ? '藍隊' : '紅隊') + '）。</p><div class="row"><button class="btn" id="du-view">打開戰場畫面</button></div>')
+      : '<div class="row"><button class="btn orange" id="du-open"' + (can && open ? '' : ' disabled') + '>開一個房間</button>' + (can ? '' : '<span class="small muted">蛋孵化之後才能上場。</span>') + '</div>') +
+    (mine ? '' : rooms.length ? rooms.map(function (r) {
+      var na = Number(r.na) || 1, nb = Number(r.nb) || 0;
+      return '<div class="ar-room"><div class="pinfo"><b>' + r.host + ' 號 ' + esc(r.hn) + ' 的房間</b><br><span class="small muted">藍隊 ' + na + ' 人・紅隊 ' + nb + ' 人</span></div>' +
+        '<button class="btn sm" data-rj="' + esc(r.id) + '" data-sd="A"' + (can && na < 5 ? '' : ' disabled') + '>加入藍隊</button><button class="btn sm red2" data-rj="' + esc(r.id) + '" data-sd="B"' + (can && nb < 5 ? '' : ' disabled') + '>加入紅隊</button></div>';
+    }).join('') : '<p class="small muted" style="margin:0">目前沒有同學開的房間。</p>');
+  var b = $('#du-open'); if (b) b.onclick = roomOpen;
+  b = $('#du-mine'); if (b) b.onclick = function () { DU.me.hide = 0; roomOv(); };
+  b = $('#du-view'); if (b) b.onclick = function () { DU.min = false; bfRender(); };
+  box.querySelectorAll('[data-rj]').forEach(function (x) { x.onclick = function () {
+    if (DU.me) { toast('你已經在一場對戰裡了。'); return; }
+    var r = DU.rooms.filter(function (y) { return y.id === x.dataset.rj; })[0]; if (!r) return;
+    guestEnter({ id: r.id, kind: 'team', host: Number(r.host), hn: r.hn, side: x.dataset.sd });
+  }; });
+}
 /* 每日訓練 */
 function startQuiz() {
   var qs = S.daily.questions, first = qs.findIndex(function (q) { return !q.result; });

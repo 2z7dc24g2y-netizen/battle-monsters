@@ -11,7 +11,7 @@ var GAME = {
   HATCH_RIGHT: 6,       // 蛋：答對孵化 +6%
   HATCH_WRONG: 2,
   HATCH_FINISH: 10,
-  BATTLES_PER_DAY: 3,
+  BATTLES_PER_DAY: 5,
   XP_WIN: 15,
   XP_LOSE: 5,
   REVIEW_PER_DAY: 3,    // 每天最多放幾題錯題複習
@@ -151,6 +151,7 @@ function pubMon_(m, i) {
   return o;
 }
 /* ---------- 課堂任務：老師設定範圍、目標、獎賞與時限；學生在時限內答對指定題數就自動拿獎賞 ---------- */
+function duelOn_(cls) { var d = cls && cls.duel; return !!(d && Number(d.until) > Date.now()); }
 function misOn_(cls) { var m = cls && cls.mission; return !!(m && m.id && Number(m.ends) > Date.now()); }
 function misOf_(st, cls) { var x = ext_(st), m = cls.mission; if (!x.mis || x.mis.id !== m.id) x.mis = { id: m.id, ok: 0, n: 0, done: false, asked: [], cur: '' }; return x.mis; }
 function misPub_(st, cls) {
@@ -336,7 +337,7 @@ function board_(S, cls) {
   var hatched = students.filter(function (s) { return s.hatchedCount > 0; }).length;
   var doneToday = students.filter(function (s) { return s.todayCount >= s.todayTotal && s.todayCount > 0; }).length;
   return {
-    cls: { code: cls.code, name: cls.name, count: cls.count, scope: cls.scope || [], gear: gearOn_(cls), mission: misOn_(cls) ? cls.mission : null },
+    cls: { code: cls.code, name: cls.name, count: cls.count, scope: cls.scope || [], gear: gearOn_(cls), mission: misOn_(cls) ? cls.mission : null, duel: duelOn_(cls) ? cls.duel : null },
     students: students, hatched: hatched, doneToday: doneToday, today: S.today()
   };
 }
@@ -376,7 +377,7 @@ var API = {
     var ms = monsOf_(st), newEgg = mr && mr.newEgg >= 0 ? mr.newEgg : grantEgg_(st, ms);
     if (newEgg >= 0 && !(mr && mr.newEgg >= 0)) { setMons_(st, ms); S.saveStudent(st); }
     var unseen = ms.map(function (m, i) { return m.hatched && m.seenHatch === false ? i : -1; }).filter(function (i) { return i >= 0; });
-    return { me: pub_(st, a.cls), clsName: a.cls.name, seenHatch: !unseen.length, unseen: unseen, newEgg: newEgg, battlesLeft: battlesLeft_(S, st), mis: mr && mr.finished ? mr : null };
+    return { me: pub_(st, a.cls), clsName: a.cls.name, seenHatch: !unseen.length, unseen: unseen, newEgg: newEgg, battlesLeft: battlesLeft_(S, st), mis: mr && mr.finished ? mr : null, duel: duelOn_(a.cls) ? Number(a.cls.duel.until) : 0 };
   },
   setLead: function (S, p) {
     var a = authStudent_(S, p), st = a.st, ms = monsOf_(st), i = Number(p.i);
@@ -897,7 +898,68 @@ API.missionA = function (S, p) {
   res.me = pub_(st, cls);
   return res;
 };
-var WRITE_ACTIONS = { missionSet: 1, missionEnd: 1, missionQ: 1, missionA: 1, teacherApply: 1, adminApprove: 1, adminReject: 1, teacherLogin: 1, changePin: 1, adminAddTeacher: 1, adminResetTeacher: 1, adminSetTeacher: 1, adminAssignClass: 1, isleSave: 1, studentLogin: 1, setLead: 1, daily: 1, answer: 1, seenHatch: 1, battleStart: 1, battleGo: 1, battleEnd: 1, createClass: 1, updateClass: 1, resetPin: 1, reward: 1, teacherAward: 1 };
+/* ---------- 同學對戰：PK 邀請與私人組隊（不上白板） ----------
+ * 老師開放時段：cls.duel = { until }（私人組隊房間只在時段內能開）
+ * 每場由開房的同學的裝置跑戰鬥，其他人用自己的手機操作；結束後每個人各自結算自己的經驗 */
+API.duelSet = function (S, p) {
+  var cls = myClass_(S, authStaff_(S, p), p.code), min = Math.round(Number(p.minutes) || 0);
+  if (min && !(min >= 5 && min <= 120)) fail_('開放時間請設定 5～120 分鐘。');
+  cls.duel = min ? { until: Date.now() + min * 60000, at: Date.now() } : {};
+  var save = {}; for (var k in cls) if (k.charAt(0) !== '_') save[k] = cls[k];
+  S.saveClass(save); cls._today = S.today();
+  return board_(S, cls);
+};
+/* 開房的同學要出戰陣容：p.A、p.B 是兩隊的座號；p.full = 帶全隊（PK），否則每人帶夥伴一隻 */
+API.duelCfg = function (S, p) {
+  var a = authStudent_(S, p), cls = a.cls, seen = {}, all = [];
+  var side = function (arr) {
+    return (Array.isArray(arr) ? arr : []).slice(0, 5).map(Number).filter(function (s) { if (!s || seen[s]) return false; seen[s] = 1; return true; }).map(function (s) {
+      var st = s === a.st.seat ? a.st : S.getStudent(cls.code, s); if (!st) return null;
+      all.push(st); return st;
+    }).filter(Boolean);
+  };
+  var A = side(p.A), B = side(p.B);
+  if (A.map(function (x) { return x.seat; }).indexOf(a.st.seat) < 0) fail_('開房的同學要在藍隊。');
+  if (!B.length) fail_('紅隊還沒有人。');
+  var gm = gearOn_(cls) ? gearMap_(S, all) : {};
+  var units = function (list) {
+    var out = [];
+    list.forEach(function (st) {
+      var t = teamOf_(st); if (!t.length) return;
+      if (!p.full) { var ms = monsOf_(st), li = leadOf_(st, ms); t = [t.filter(function (u) { return u.mi === li; })[0] || t.slice().sort(function (x, y) { return y.lv - x.lv; })[0]]; }
+      var g = gm[st.key]; t.forEach(function (u) { if (g) { u.g = g.sum; u.gs = gearTxt_(g); } out.push(u); });
+    });
+    return out;
+  };
+  var cfg = { teamA: units(A), teamB: units(B) };
+  if (!cfg.teamA.length || !cfg.teamB.length) fail_('有一隊的理化獸都還沒孵化。');
+  return { cfg: cfg, xpWin: GAME.XP_WIN, xpLose: GAME.XP_LOSE, battlesLeft: battlesLeft_(S, a.st) };
+};
+/* 對戰結束：每個人結算自己（同一場只算一次）；今天還有挑戰次數才扣一次、拿經驗 */
+API.duelEnd = function (S, p) {
+  var a = authStudent_(S, p), st = a.st, x = ext_(st), id = String(p.id || '').slice(0, 40);
+  if (!id) fail_('找不到這場對戰。');
+  var dd = Array.isArray(x.dd) ? x.dd : [];
+  if (dd.indexOf(id) >= 0) return { xpGain: 0, counted: false, dup: true, events: [], newEgg: -1, me: pub_(st, a.cls), battlesLeft: battlesLeft_(S, st) };
+  dd.push(id); x.dd = dd.slice(-20);
+  var res = p.result === 'win' ? 'win' : p.result === 'draw' ? 'draw' : 'lose';
+  var counted = battlesLeft_(S, st) > 0, gain = 0, ev = [], newEgg = -1;
+  if (counted) {
+    var today = S.today();
+    if (st.battleDate !== today) { st.battleDate = today; st.battleCount = 0; }
+    st.battleCount++;
+    gain = res === 'win' ? GAME.XP_WIN : GAME.XP_LOSE;
+    if (res === 'win') st.wins++; else if (res === 'lose') st.losses++;
+    var ms = monsOf_(st);
+    var used = (p.used || []).map(Number).filter(function (i, k, arr) { return i >= 0 && i < ms.length && ms[i].hatched && arr.indexOf(i) === k; });
+    ev = used.map(function (i) { var pre = stageOf(ms[i].level), ups = applyXp_(ms[i], gain); return { i: i, levelUps: ups, evolved: stageOf(ms[i].level) > pre }; });
+    st.totalXp = (Number(st.totalXp) || 0) + gain * used.length;
+    newEgg = grantEgg_(st, ms); setMons_(st, ms);
+  }
+  S.saveStudent(st);
+  return { xpGain: gain, counted: counted, result: res, events: ev, newEgg: newEgg, me: pub_(st, a.cls), battlesLeft: battlesLeft_(S, st) };
+};
+var WRITE_ACTIONS = { duelSet: 1, duelEnd: 1,  missionSet: 1, missionEnd: 1, missionQ: 1, missionA: 1, teacherApply: 1, adminApprove: 1, adminReject: 1, teacherLogin: 1, changePin: 1, adminAddTeacher: 1, adminResetTeacher: 1, adminSetTeacher: 1, adminAssignClass: 1, isleSave: 1, studentLogin: 1, setLead: 1, daily: 1, answer: 1, seenHatch: 1, battleStart: 1, battleGo: 1, battleEnd: 1, createClass: 1, updateClass: 1, resetPin: 1, reward: 1, teacherAward: 1 };
 
 function runApi_(S, action, payload) {
   try {
@@ -1193,7 +1255,7 @@ var FBX = (function () {
   }
 
   /* ---------- 入口：取代原本的伺服器呼叫 ---------- */
-  var STAFF_ACT = /^(teacherLogin|logout|changePin|admin|board|updateClass|createClass|pins|resetPin|reward|teacherRoster|teacherAward|classQuestion|liveBoard|mission(Set|End)$|room(T|Open|Close|Assign|Team))/;
+  var STAFF_ACT = /^(teacherLogin|logout|changePin|admin|board|updateClass|createClass|pins|resetPin|reward|teacherRoster|teacherAward|classQuestion|liveBoard|duelSet|mission(Set|End)$|room(T|Open|Close|Assign|Team))/;
   function run(action, p) {
     var r = JSON.parse(runApi_(Store, action, p));
     if (!r.ok) throw new Error(r.error);
@@ -1233,36 +1295,43 @@ var FBX = (function () {
    * rooms/{班級}/joined    學生按了「加入白板作戰」
    * rooms/{班級}/state     戰鬥狀態（哪些座號在場上）
    * rooms/{班級}/turn      輪到誰、要做什麼；手機回 ack（收到）與 resp（結果） */
-  var Room = {
-    T: {
-      reset: function (code) { return dbS.ref('rooms/' + code).set({ open: true, at: Date.now() }); },
-      close: function (code) { return dbS.ref('rooms/' + code).set(null); },
-      state: function (code, o) { return dbS.ref('rooms/' + code + '/state').set(o); },
-      watch: function (code, cb) {
-        var seen = {}, pressed = [], lastKey = '', ref = dbS.ref('rooms/' + code);
+  /* 主持戰鬥的那台裝置（老師白板，或開房的同學）：叫手機操作、廣播戰況 */
+  function hostAt(db, path, keepOnReset) {
+    var base = function () { return db.ref(path); };
+    return {
+      reset: function (extra) { return base().set(Object.assign({ open: true, at: Date.now() }, extra || {})); },
+      close: function () { return base().set(null); },
+      state: function (o) { return base().child('state').set(JSON.parse(JSON.stringify(o || null))); },
+      watch: function (cb) {
+        var seen = {}, pressed = [], sides = {}, names = {}, lastKey = '', ref = base();
         function calc() {
           var now = Date.now(), on = [];
           Object.keys(seen).forEach(function (s) { if (now - seen[s].t < 25000) on.push(Number(s)); });
-          var k = JSON.stringify([on, pressed]); if (k !== lastKey) { lastKey = k; cb({ online: on, pressed: pressed }); }
+          var k = JSON.stringify([on, pressed, sides]); if (k !== lastKey) { lastKey = k; cb({ online: on, pressed: pressed, sides: sides, names: names }); }
         }
         ref.child('presence').on('value', function (snap) {
           var v = snap.val() || {};
           Object.keys(v).forEach(function (s) { var n = v[s] && v[s].n; if (!seen[s] || seen[s].n !== n) seen[s] = { n: n, t: Date.now() }; });
           calc();
-        });
-        ref.child('joined').on('value', function (snap) { pressed = Object.keys(snap.val() || {}).map(Number).sort(function (a, b) { return a - b; }); calc(); });
+        }, function () {});
+        ref.child('joined').on('value', function (snap) {
+          var v = snap.val() || {}; sides = {}; names = {};
+          pressed = Object.keys(v).map(Number).sort(function (a, b) { return a - b; });
+          pressed.forEach(function (s) { var o = v[s] || {}; sides[s] = o.side === 'B' ? 'B' : o.side === 'A' ? 'A' : ''; names[s] = String(o.name || o.n || ''); });
+          calc();
+        }, function () {});
         var timer = setInterval(calc, 4000);
         return function () { ref.child('presence').off(); ref.child('joined').off(); clearInterval(timer); };
       },
       /* 叫某位同學的手機做一件事，回傳 {noack}｜{timeout}｜{v:結果} */
-      turn: function (code, d) {
-        var base = dbS.ref('rooms/' + code), id = d.id;
-        return base.child('turn').set({ id: id, seat: d.seat, kind: d.kind, data: JSON.parse(JSON.stringify(d.data || {})), wait: d.wait, at: Date.now() }).then(function () {
+      turn: function (d) {
+        var b = base(), id = d.id;
+        return b.child('turn').set({ id: id, seat: d.seat, kind: d.kind, data: JSON.parse(JSON.stringify(d.data || {})), wait: d.wait, at: Date.now() }).then(function () {
           return new Promise(function (res) {
-            var acked = false, done = false, t1, t2, ra = base.child('ack/' + id), rr = base.child('resp/' + id);
+            var acked = false, done = false, t1, t2, ra = b.child('ack/' + id), rr = b.child('resp/' + id);
             function fin(v) {
               if (done) return; done = true; ra.off(); rr.off(); clearTimeout(t1); clearTimeout(t2);
-              base.child('turn').set(null); ra.set(null); rr.set(null); res(v);
+              b.child('turn').set(null).catch(function () {}); ra.set(null).catch(function () {}); rr.set(null).catch(function () {}); res(v);
             }
             ra.on('value', function (s) { if (s.val()) acked = true; });
             rr.on('value', function (s) { var v = s.val(); if (v) fin({ v: v }); });
@@ -1271,19 +1340,120 @@ var FBX = (function () {
           });
         }, function () { return { noack: true }; });
       }
-    },
-    S: {
+    };
+  }
+  /* 參加戰鬥的手機：看戰況、收到輪到自己就回應 */
+  function playerAt(db, path) {
+    return {
       watch: function (h) {
-        if (!STU) return function () {};
-        var base = dbT.ref('rooms/' + STU.code), me = String(STU.seat), offs = [];
-        function on(path, fn) { var r = base.child(path); r.on('value', function (s) { fn(s.val()); }, function () {}); offs.push(function () { r.off(); }); }
-        on('open', h.open); on('state', h.state); on('turn', h.turn); on('joined/' + me, function (v) { h.joined(!!v); });
+        var base = db.ref(path), me = STU ? String(STU.seat) : '', offs = [];
+        function on(p, fn) { if (!fn) return; var r = base.child(p); r.on('value', function (s) { fn(s.val()); }, function () {}); offs.push(function () { r.off(); }); }
+        on('open', h.open); on('state', h.state); on('turn', h.turn); if (h.joined) on('joined/' + me, h.joined); if (h.all) on('joined', h.all);
         return function () { offs.forEach(function (f) { f(); }); };
       },
-      beat: function () { if (!STU) return; dbT.ref('rooms/' + STU.code + '/presence/' + STU.seat).set({ n: Date.now() % 1e9 }).catch(function () {}); },
-      join: function (on, name) { if (!STU) return Promise.resolve(); return dbT.ref('rooms/' + STU.code + '/joined/' + STU.seat).set(on ? { name: String(name || ''), at: Date.now() } : null); },
-      ack: function (id) { return dbT.ref('rooms/' + STU.code + '/ack/' + id).set(true); },
-      resp: function (id, v) { return dbT.ref('rooms/' + STU.code + '/resp/' + id).set(v); }
+      beat: function () { if (!STU) return; db.ref(path + '/presence/' + STU.seat).set({ n: Date.now() % 1e9 }).catch(function () {}); },
+      join: function (on, name, side) {
+        if (!STU) return Promise.resolve();
+        var r = db.ref(path + '/joined/' + STU.seat);
+        if (!on) { r.onDisconnect().cancel(); return r.set(null); }
+        return r.set({ name: String(name || ''), side: side === 'B' ? 'B' : 'A', at: Date.now() }).then(function () { if (path.indexOf('duels/') === 0) r.onDisconnect().remove(); });
+      },
+      ack: function (id) { return db.ref(path + '/ack/' + id).set(true); },
+      resp: function (id, v) { return db.ref(path + '/resp/' + id).set(v); }
+    };
+  }
+
+  /* ---------- 白板作戰：老師白板 ⇄ 學生手機 ----------
+   * rooms/{班級}/open      老師開放中（學生才會心跳、才看得到加入）
+   * rooms/{班級}/presence  學生手機心跳（誰的手機在線，能被叫去操作）
+   * rooms/{班級}/joined    學生按了「加入藍隊／紅隊」{ name, side }
+   * rooms/{班級}/state     戰況（排陣、輪到誰、血量、結果）
+   * rooms/{班級}/turn      輪到誰、要做什麼；手機回 ack（收到）與 resp（結果） */
+  var Room = {
+    T: {
+      reset: function (code) { return hostAt(dbS, 'rooms/' + code).reset(); },
+      close: function (code) { return hostAt(dbS, 'rooms/' + code).close(); },
+      state: function (code, o) { return hostAt(dbS, 'rooms/' + code).state(o); },
+      watch: function (code, cb) { return hostAt(dbS, 'rooms/' + code).watch(cb); },
+      turn: function (code, d) { return hostAt(dbS, 'rooms/' + code).turn(d); }
+    },
+    S: {
+      watch: function (h) { if (!STU) return function () {}; return playerAt(dbT, 'rooms/' + STU.code).watch(h); },
+      beat: function () { if (STU) playerAt(dbT, 'rooms/' + STU.code).beat(); },
+      join: function (on, name, side) { if (!STU) return Promise.resolve(); return playerAt(dbT, 'rooms/' + STU.code).join(on, name, side); },
+      ack: function (id) { return playerAt(dbT, 'rooms/' + STU.code).ack(id); },
+      resp: function (id, v) { return playerAt(dbT, 'rooms/' + STU.code).resp(id, v); }
+    },
+    /* ---------- 同學對戰（PK 邀請、私人組隊；不經過白板） ----------
+     * duels/{班級}/on/{座號}          誰在線上（研究室開著）
+     * duels/{班級}/inv/{對方}/{我}    PK 邀請
+     * duels/{班級}/list/{房號}        房間列表 { host, hn, kind:pk|team, open, to }
+     * duels/{班級}/m/{房號}           房間：joined、ans、state、turn、ack、resp */
+    D: {
+      ok: true,
+      skew: 0,
+      now: function () { return Date.now() + Room.D.skew; },
+      until: function () { if (!STU) return 0; var c = C.classes[STU.code]; return c && c.duel ? Number(c.duel.until) || 0 : 0; },
+      lobby: function (h) {
+        if (!STU) return function () {};
+        var code = STU.code, me = STU.seat, base = dbT.ref('duels/' + code), offs = [], mine = base.child('on/' + me), timer = 0;
+        var fail = function () { Room.D.ok = false; if (h.fail) h.fail(); };
+        var sk = dbT.ref('.info/serverTimeOffset'); sk.on('value', function (s) { Room.D.skew = Number(s.val()) || 0; }); offs.push(function () { sk.off(); });
+        var put = function () {
+          if (document.hidden) { mine.set(null).catch(function () {}); return; }
+          mine.set({ t: firebase.database.ServerValue.TIMESTAMP, n: String(h.name || '') }).then(function () { mine.onDisconnect().remove(); }, fail);
+        };
+        put(); timer = setInterval(put, 30000);
+        document.addEventListener('visibilitychange', put); offs.push(function () { document.removeEventListener('visibilitychange', put); clearInterval(timer); mine.set(null).catch(function () {}); });
+        var on = function (p, fn) { var r = base.child(p); r.on('value', function (s) { fn(s.val() || {}); }, fail); offs.push(function () { r.off(); }); };
+        on('on', function (v) {
+          var now = Room.D.now(), out = {};
+          Object.keys(v).forEach(function (s) { var o = v[s]; if (o && now - Number(o.t) < 75000 && Number(s) !== me) out[s] = String(o.n || ''); });
+          h.online(out);
+        });
+        on('inv/' + me, function (v) {
+          var now = Room.D.now();
+          h.invites(Object.keys(v).map(function (s) { var o = v[s] || {}; return { from: Number(s), n: String(o.n || ''), id: String(o.id || ''), t: Number(o.t) || 0 }; })
+            .filter(function (x) { return x.id && now - x.t < 90000; }));
+        });
+        on('list', function (v) { h.rooms(Object.keys(v).map(function (id) { var o = v[id] || {}; o.id = id; return o; })); });
+        return function () { offs.forEach(function (f) { f(); }); };
+      },
+      newId: function () { return 'd' + Date.now().toString(36) + (STU ? STU.seat : 0) + Math.floor(Math.random() * 90 + 10); },
+      /* 開房（PK 會同時送邀請給 to） */
+      open: function (id, o) {
+        var base = dbT.ref('duels/' + STU.code), L = base.child('list/' + id), M = base.child('m/' + id);
+        var rec = { host: STU.seat, hn: String(o.name || ''), kind: o.kind === 'team' ? 'team' : 'pk', open: true, at: firebase.database.ServerValue.TIMESTAMP };
+        if (o.to) rec.to = Number(o.to);
+        L.onDisconnect().remove(); M.onDisconnect().remove();
+        return L.set(rec).then(function () { return M.child('joined/' + STU.seat).set({ name: String(o.name || ''), side: 'A', at: Date.now() }); }).then(function () {
+          if (!o.to) return;
+          var I = base.child('inv/' + o.to + '/' + STU.seat); I.onDisconnect().remove();
+          return I.set({ n: String(o.name || ''), id: id, t: firebase.database.ServerValue.TIMESTAMP });
+        });
+      },
+      setOpen: function (id, v) { return dbT.ref('duels/' + STU.code + '/list/' + id + '/open').set(!!v); },
+      counts: function (id, a, b) { return dbT.ref('duels/' + STU.code + '/list/' + id).update({ na: a, nb: b }); },
+      shut: function (id, to) {
+        var base = dbT.ref('duels/' + STU.code), j = [base.child('list/' + id).set(null), base.child('m/' + id).set(null)];
+        base.child('list/' + id).onDisconnect().cancel(); base.child('m/' + id).onDisconnect().cancel();
+        if (to) j.push(base.child('inv/' + to + '/' + STU.seat).set(null));
+        return Promise.all(j).catch(function () {});
+      },
+      answer: function (from, id, ok) {
+        var base = dbT.ref('duels/' + STU.code);
+        return base.child('inv/' + STU.seat + '/' + from).set(null).then(function () { return base.child('m/' + id + '/ans').set({ ok: !!ok, seat: STU.seat }); });
+      },
+      watchRoom: function (id, h) {
+        var base = dbT.ref('duels/' + STU.code), offs = [];
+        var on = function (r, fn) { r.on('value', function (s) { fn(s.val()); }, function () {}); offs.push(function () { r.off(); }); };
+        if (h.list) on(base.child('list/' + id), h.list);
+        if (h.joined) on(base.child('m/' + id + '/joined'), function (v) { h.joined(v || {}); });
+        if (h.ans) on(base.child('m/' + id + '/ans'), h.ans);
+        return function () { offs.forEach(function (f) { f(); }); };
+      },
+      host: function (id) { return hostAt(dbT, 'duels/' + STU.code + '/m/' + id); },
+      player: function (id) { return playerAt(dbT, 'duels/' + STU.code + '/m/' + id); }
     }
   };
 
