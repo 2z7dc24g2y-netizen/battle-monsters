@@ -151,7 +151,7 @@ function pubMon_(m, i) {
   return o;
 }
 /* ---------- 課堂任務：老師設定範圍、目標、獎賞與時限；學生在時限內答對指定題數就自動拿獎賞 ---------- */
-function duelOn_(cls) { var d = cls && cls.duel; return !!(d && Number(d.until) > Date.now()); }
+function duelOn_(cls) { var d = cls && cls.duel; return !!(d && (d.always || Number(d.until) > Date.now())); }
 function misOn_(cls) { var m = cls && cls.mission; return !!(m && m.id && Number(m.ends) > Date.now()); }
 function misOf_(st, cls) { var x = ext_(st), m = cls.mission; if (!x.mis || x.mis.id !== m.id) x.mis = { id: m.id, ok: 0, n: 0, done: false, asked: [], cur: '' }; return x.mis; }
 function misPub_(st, cls) {
@@ -899,12 +899,13 @@ API.missionA = function (S, p) {
   return res;
 };
 /* ---------- 同學對戰：PK 邀請與私人組隊（不上白板） ----------
- * 老師開放時段：cls.duel = { until }（私人組隊房間只在時段內能開）
+ * 老師開放時段：cls.duel = { until } 或 { always: true }（一直開放）；私人組隊房間只在開放時能開
+ * 私人組隊對戰不算每天 5 次挑戰，每場都拿經驗；一對一 PK 仍算挑戰次數
  * 每場由開房的同學的裝置跑戰鬥，其他人用自己的手機操作；結束後每個人各自結算自己的經驗 */
 API.duelSet = function (S, p) {
   var cls = myClass_(S, authStaff_(S, p), p.code), min = Math.round(Number(p.minutes) || 0);
   if (min && !(min >= 5 && min <= 120)) fail_('開放時間請設定 5～120 分鐘。');
-  cls.duel = min ? { until: Date.now() + min * 60000, at: Date.now() } : {};
+  cls.duel = p.always ? { always: true, at: Date.now() } : min ? { until: Date.now() + min * 60000, at: Date.now() } : {};
   var save = {}; for (var k in cls) if (k.charAt(0) !== '_') save[k] = cls[k];
   S.saveClass(save); cls._today = S.today();
   return board_(S, cls);
@@ -943,11 +944,11 @@ API.duelEnd = function (S, p) {
   if (dd.indexOf(id) >= 0) return { xpGain: 0, counted: false, dup: true, events: [], newEgg: -1, me: pub_(st, a.cls), battlesLeft: battlesLeft_(S, st) };
   dd.push(id); x.dd = dd.slice(-20);
   var res = p.result === 'win' ? 'win' : p.result === 'draw' ? 'draw' : 'lose';
-  var counted = battlesLeft_(S, st) > 0, gain = 0, ev = [], newEgg = -1;
+  var team = p.kind === 'team', counted = team || battlesLeft_(S, st) > 0, gain = 0, ev = [], newEgg = -1;
   if (counted) {
     var today = S.today();
     if (st.battleDate !== today) { st.battleDate = today; st.battleCount = 0; }
-    st.battleCount++;
+    if (!team) st.battleCount++;
     gain = res === 'win' ? GAME.XP_WIN : GAME.XP_LOSE;
     if (res === 'win') st.wins++; else if (res === 'lose') st.losses++;
     var ms = monsOf_(st);
@@ -957,7 +958,7 @@ API.duelEnd = function (S, p) {
     newEgg = grantEgg_(st, ms); setMons_(st, ms);
   }
   S.saveStudent(st);
-  return { xpGain: gain, counted: counted, result: res, events: ev, newEgg: newEgg, me: pub_(st, a.cls), battlesLeft: battlesLeft_(S, st) };
+  return { xpGain: gain, counted: counted, team: team, result: res, events: ev, newEgg: newEgg, me: pub_(st, a.cls), battlesLeft: battlesLeft_(S, st) };
 };
 var WRITE_ACTIONS = { duelSet: 1, duelEnd: 1,  missionSet: 1, missionEnd: 1, missionQ: 1, missionA: 1, teacherApply: 1, adminApprove: 1, adminReject: 1, teacherLogin: 1, changePin: 1, adminAddTeacher: 1, adminResetTeacher: 1, adminSetTeacher: 1, adminAssignClass: 1, isleSave: 1, studentLogin: 1, setLead: 1, daily: 1, answer: 1, seenHatch: 1, battleStart: 1, battleGo: 1, battleEnd: 1, createClass: 1, updateClass: 1, resetPin: 1, reward: 1, teacherAward: 1 };
 
@@ -1393,7 +1394,8 @@ var FBX = (function () {
       ok: true,
       skew: 0,
       now: function () { return Date.now() + Room.D.skew; },
-      until: function () { if (!STU) return 0; var c = C.classes[STU.code]; return c && c.duel ? Number(c.duel.until) || 0 : 0; },
+      until: function () { if (!STU) return 0; var c = C.classes[STU.code]; return c && c.duel ? (c.duel.always ? 9e15 : Number(c.duel.until) || 0) : 0; },
+      always: function () { if (!STU) return false; var c = C.classes[STU.code]; return !!(c && c.duel && c.duel.always); },
       lobby: function (h) {
         if (!STU) return function () {};
         var code = STU.code, me = STU.seat, base = dbT.ref('duels/' + code), offs = [], mine = base.child('on/' + me), timer = 0;

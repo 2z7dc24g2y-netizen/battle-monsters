@@ -737,6 +737,10 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 .bfs-num.dmg{color:#ffe14d}.bfs-num.heal{color:#8ef59a}
 @keyframes bfsNum{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}15%{opacity:1;transform:translate(-50%,-4px) scale(1.15)}100%{opacity:0;transform:translate(-50%,-26px) scale(1)}}
 @media (prefers-reduced-motion:reduce){.bfs-u.act .bfs-img,.bfs-u.hit .bfs-img{animation:none}}
+.sw{position:relative;width:52px;height:30px;border-radius:15px;border:0;padding:0;background:rgba(127,127,140,.45);cursor:pointer;flex:none;transition:background .2s}
+.sw i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:left .2s}
+.sw.on{background:#30d158}.sw.on i{left:25px}
+.sw:focus-visible{outline:3px solid #9cd0ff;outline-offset:2px}
 .lobby{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lobby>div{border-radius:12px;padding:10px;background:rgba(255,255,255,.06);min-height:80px}.lobby h3{margin:0 0 6px;font-size:15px}.lobby .A h3{color:#9cd0ff}.lobby .B h3{color:#ffb09e}.lobby ul{margin:0;padding-left:18px;font-size:14px;line-height:1.7}
 </style>
 
@@ -1194,23 +1198,34 @@ function renderMisBar() {
     call('board', { tok: S.tok, code: S.board.cls.code }).then(function (d) { S.board = d; renderBoard(); if (LIVE.on) liveTick(); }).catch(function () {}); }, 30000);
 }
 /* ---------- 私人對戰：老師開放一段時間，學生用自己的手機組隊對打 ---------- */
+function duelLive(d) { return !!(d && (d.always || d.until > Date.now())); }
 function renderDuelBar() {
   var bar = $('#b-duelbar'), d = S.board && S.board.cls.duel;
-  if (!d || d.until <= Date.now()) { bar.hidden = true; $('#b-duel').textContent = '私人對戰'; return; }
-  bar.hidden = false; $('#b-duel').textContent = '私人對戰 開放中';
-  bar.innerHTML = '<div><b>私人組隊對戰開放中</b><span class="small muted">　學生可以用自己的手機開房間、找同學對打，不會出現在白板上</span></div><span class="misclock" data-ends="' + d.until + '">' + mmss(d.until) + '</span><button class="btn ghost sm" id="duel-more">延長</button><button class="btn ghost sm" id="duel-end">結束開放</button>';
-  $('#duel-more').onclick = duelEditor;
-  $('#duel-end').onclick = function () { duelSet(0, this); };
+  if (!duelLive(d)) { bar.hidden = true; $('#b-duel').textContent = '私人對戰'; return; }
+  bar.hidden = false; $('#b-duel').textContent = d.always ? '私人對戰 一直開放' : '私人對戰 開放中';
+  bar.innerHTML = '<div><b>私人組隊對戰' + (d.always ? '一直開放' : '開放中') + '</b><span class="small muted">　學生可以用自己的手機開房間找同學對打，不算每天 5 次挑戰，每場都有經驗</span></div>' +
+    (d.always ? '<button class="sw on" role="switch" aria-checked="true" id="duel-sw" aria-label="一直開放"><i></i></button><span class="small">一直開放</span>'
+      : '<span class="misclock" data-ends="' + d.until + '">' + mmss(d.until) + '</span><button class="btn ghost sm" id="duel-more">延長</button><button class="btn ghost sm" id="duel-end">結束開放</button>');
+  var x = $('#duel-more'); if (x) x.onclick = duelEditor;
+  x = $('#duel-end'); if (x) x.onclick = function () { duelSet(0, this); };
+  x = $('#duel-sw'); if (x) x.onclick = function () { duelSet(0, this); };
 }
-function duelSet(min, btn) {
-  busy(btn, true, '');
-  call('duelSet', { tok: S.tok, code: S.board.cls.code, minutes: min }).then(function (d) { S.board = d; closeOv(); renderBoard(); toast(min ? '已開放私人對戰 ' + min + ' 分鐘' : '私人對戰已結束開放'); }).catch(function (e) { toast(e.message); busy(btn, false); });
+function duelSet(min, btn, always) {
+  var sw = btn && btn.classList.contains('sw');
+  if (sw) { btn.disabled = true; btn.classList.toggle('on'); } else busy(btn, true, '');
+  call('duelSet', { tok: S.tok, code: S.board.cls.code, minutes: min, always: !!always }).then(function (d) {
+    S.board = d; closeOv(); renderBoard();
+    toast(always ? '私人對戰已設成一直開放' : min ? '已開放私人對戰 ' + min + ' 分鐘' : '私人對戰已關閉');
+  }).catch(function (e) { toast(e.message); if (sw) { btn.disabled = false; btn.classList.toggle('on'); } else busy(btn, false); });
 }
 function duelEditor() {
+  var d = S.board && S.board.cls.duel, on = !!(d && d.always);
   openOv('<div class="ov-head"><h2>開放私人對戰</h2><button class="x" aria-label="關閉">×</button></div>' +
-    '<p style="margin:0">開放的這段時間，學生可以在自己的手機開房間，找同學分成藍隊、紅隊對打（每隊最多 5 人），戰鬥不會出現在白板上。</p>' +
-    '<p class="small muted" style="margin:0">每場會用掉一次學生今天的挑戰（每天 5 次），還有次數的人才拿經驗；次數用完的人還是可以一起玩。時間到之後就不能再開新房間，已經開打的那一場會打完。同學之間一對一的 PK 邀請不受這個時段限制。</p>' +
-    '<div class="row"><span class="small"><b>開放多久</b></span>' + [10, 15, 20, 30, 45].map(function (n) { return '<button class="btn" data-dm="' + n + '">' + n + ' 分鐘</button>'; }).join('') + '</div>', 'wide');
+    '<p style="margin:0">開放時，學生可以在自己的手機開房間，找同學分成藍隊、紅隊對打（每隊最多 5 人），戰鬥不會出現在白板上。</p>' +
+    '<p class="small muted" style="margin:0">私人對戰不算每天 5 次挑戰，每場都拿經驗（贏 +15、輸 +5，每隻出戰的理化獸）。關閉之後就不能再開新房間，已經開打的那一場會打完。同學之間一對一的 PK 邀請照樣算每天 5 次，也不受這裡限制。</p>' +
+    '<div class="row" style="align-items:center"><button class="sw' + (on ? ' on' : '') + '" role="switch" aria-checked="' + on + '" id="dm-sw" aria-label="一直開放"><i></i></button><span><b>一直開放</b><span class="small muted">　不限時間、不限場數，直到你關掉</span></span></div>' +
+    '<div class="row"><span class="small"><b>或只開放一段時間</b></span>' + [10, 15, 20, 30, 45].map(function (n) { return '<button class="btn" data-dm="' + n + '">' + n + ' 分鐘</button>'; }).join('') + '</div>', 'wide');
+  $('#dm-sw').onclick = function () { duelSet(0, this, !on); };
   $('#ov-box').querySelectorAll('[data-dm]').forEach(function (b) { b.onclick = function () { duelSet(Number(b.dataset.dm), b); }; });
 }
 $('#b-duel').onclick = duelEditor;
@@ -2071,7 +2086,7 @@ function duSettle() {
   if (!mine.length) return;
   m.settled = true; m.res = '結算中…';
   var sd = mine[0].s, result = st.win === 'draw' ? 'draw' : st.win === sd ? 'win' : 'lose';
-  call('duelEnd', Object.assign({ id: m.id, result: result, used: mine.map(function (u) { return u.mi; }) }, S.auth)).then(function (x) {
+  call('duelEnd', Object.assign({ id: m.id, kind: m.kind, result: result, used: mine.map(function (u) { return u.mi; }) }, S.auth)).then(function (x) {
     S.me = x.me; S.battlesLeft = x.battlesLeft; m.res = rewardTxt(x); m.ev = x; bfRender();
   }).catch(function (e) { m.res = esc(e.message); bfRender(); });
 }
@@ -2149,12 +2164,12 @@ function hostStart() {
     var pk = m.kind === 'pk', ch = F.D.host(m.id), res = null;
     openBattle({ mode: 'duel', me: S.auth.seat, teamA: r.cfg.teamA, teamB: r.cfg.teamB, remote: true, joined: guests,
       title: pk ? 'PK 對戰' : '私人組隊對戰', nameA: pk ? nm(S.auth.seat) : '藍隊', nameB: pk ? nm(B[0]) : '紅隊',
-      note: '同學用自己的手機操作。今天還有挑戰次數的人，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' }, {
+      note: pk ? '對方用自己的手機操作。打完各用掉一次今天的挑戰，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' : '同學用自己的手機操作。私人對戰不算每天 5 次挑戰，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' }, {
       'cb-remote': function (d) { ch.turn(d).then(function (v) { reply({ t: 'cb-remote-res', id: d.id, v: v }); }); },
       'cb-state': function (d) { ch.state(d).catch(function () {}); },
       'cb-end': function (d) {
         var result = d.result === 'A' ? 'win' : d.result === 'B' ? 'lose' : 'draw';
-        call('duelEnd', Object.assign({ id: m.id, result: result, used: d.used || [] }, S.auth)).then(function (x) {
+        call('duelEnd', Object.assign({ id: m.id, kind: m.kind, result: result, used: d.used || [] }, S.auth)).then(function (x) {
           res = x; S.me = x.me; S.battlesLeft = x.battlesLeft;
           reply({ t: 'cb-reward', html: '<span>' + esc(rewardTxt(x)) + '</span>' });
         }).catch(function (e) { reply({ t: 'cb-reward', html: '<span>' + esc(e.message) + '</span>' }); });
@@ -2172,8 +2187,8 @@ function duRender() {
   box.hidden = false;
   var rooms = DU.rooms.filter(function (r) { return r.kind === 'team' && r.open && Number(r.host) !== S.auth.seat; });
   var can = S.me && S.me.hatchedCount > 0, ends = until - F.D.skew;
-  box.innerHTML = '<h3><span class="dot on"></span>私人組隊對戰' + (open ? '<span class="pill num" data-ends="' + ends + '">' + mmss(ends) + '</span>' : '') + '</h3>' +
-    '<p class="small muted" style="margin:0">老師開放的時間內，可以自己開房間、找同學分藍紅兩隊對打，不會出現在白板上。</p>' +
+  box.innerHTML = '<h3><span class="dot on"></span>私人組隊對戰' + (open ? (F.D.always() ? '<span class="pill">一直開放</span>' : '<span class="pill num" data-ends="' + ends + '">' + mmss(ends) + '</span>') : '') + '</h3>' +
+    '<p class="small muted" style="margin:0">老師開放的時候，可以自己開房間、找同學分藍紅兩隊對打，不會出現在白板上。不算每天 5 次挑戰，每場都有經驗。</p>' +
     (mine ? (mine.role === 'host' ? '<div class="row"><button class="btn orange" id="du-mine">回到我的房間</button></div>' : '<p class="small" style="margin:0">你在 ' + mine.host + ' 號 ' + esc(mine.hn) + ' 的房間（' + (mine.side === 'A' ? '藍隊' : '紅隊') + '）。</p><div class="row"><button class="btn" id="du-view">打開戰場畫面</button></div>')
       : '<div class="row"><button class="btn orange" id="du-open"' + (can && open ? '' : ' disabled') + '>開一個房間</button>' + (can ? '' : '<span class="small muted">蛋孵化之後才能上場。</span>') + '</div>') +
     (mine ? '' : rooms.length ? rooms.map(function (r) {
