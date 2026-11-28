@@ -332,7 +332,7 @@ input[type=checkbox]{accent-color:var(--gold);width:18px;height:18px}
 <script src="anim-player.js?v=1"></script><script src="p-stand.js?v=6"></script>
 
 <script>var MON_FILES=["earth1", "earth2", "earth3", "elec1", "elec2", "elec3", "fire1", "fire2", "fire3", "water1", "water2", "water3", "wood1", "wood2", "wood3"],MON_V=6;window.MON_ANIM=window.MON_ANIM||{};function loadMon(keys,cb){var need=keys.filter(function(k,i){return keys.indexOf(k)===i&&!MON_ANIM[k]&&MON_FILES.indexOf(k)>=0}),n=need.length;if(!n)return cb();need.forEach(function(k){var s=document.createElement("script");s.src="mon/"+k+".js?v="+MON_V;s.onload=s.onerror=function(){if(--n===0)cb()};document.head.appendChild(s)})}</script>
-<script src="p-qs.js?v=s5"></script>
+<script src="p-qs.js?v=s6"></script>
 <script src="gear.js?v=s5"></script>
 <script src="p-core.js?v=s5"></script><script src="school-p.js"></script><script src="battle-wx.js?v=s3"></script><script src="hanabi.js?v=1"></script><script src="ultfx.js?v=1"></script><script src="ending.js?v=1"></script>
 <script>
