@@ -772,6 +772,25 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 .sw.on{background:#30d158}.sw.on i{left:25px}
 .sw:focus-visible{outline:3px solid #9cd0ff;outline-offset:2px}
 .lobby{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lobby>div{border-radius:12px;padding:10px;background:rgba(255,255,255,.06);min-height:80px}.lobby h3{margin:0 0 6px;font-size:15px}.lobby .A h3{color:#9cd0ff}.lobby .B h3{color:#ffb09e}.lobby ul{margin:0;padding-left:18px;font-size:14px;line-height:1.7}
+
+/* 理化獸對戰聯盟 */
+.lg-champ{display:flex;align-items:center;gap:8px;font-size:15px}.lg-champ.big{font-size:18px;font-weight:700}
+.lg-flag{width:22px;height:22px;flex:none}
+.lg-sea{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;padding:14px;border-radius:20px;background:radial-gradient(circle at 20% 15%,rgba(255,255,255,.25),transparent 40%),linear-gradient(180deg,#2c6fa3,#174b78)}
+.lg-isle{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:4px 6px 10px;border-radius:16px;color:#fff}
+.lg-isle.mine{background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.lg-isle.champ{background:rgba(255,211,77,.16);box-shadow:inset 0 0 0 2px #ffd34d}
+.lg-land{width:100%;max-width:150px;height:auto;margin-bottom:-38px}
+.lg-def{position:relative;display:flex;justify-content:center;flex-wrap:nowrap;gap:0;min-height:40px;width:100%}
+.lg-def img{width:20%;max-width:40px;height:auto;aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}.lg-def img.off{filter:grayscale(1) brightness(.6);opacity:.55}
+.lg-crown{position:absolute;top:2px;left:6px;display:flex;align-items:center;gap:2px;font-size:12px;color:#ffd34d}
+.lg-nm{font-size:15px;word-break:break-all}.lg-isle .small{color:rgba(255,255,255,.78)}
+.lg-isle .btn{margin-top:2px}
+.lg-rank{display:flex;flex-direction:column;gap:6px}
+.lg-rank .r{display:grid;grid-template-columns:44px 1fr auto auto;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.07)}
+.lg-rank .r span:nth-child(2){display:flex;align-items:center;gap:4px;min-width:0;overflow-wrap:anywhere}
+.lg-rank .r.me{box-shadow:inset 0 0 0 2px var(--accent,#e0a526)}.lg-rank .r.off{opacity:.5}
+@media (max-width:420px){.lg-sea{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px;gap:8px}.lg-rank .r{grid-template-columns:34px 1fr auto;}.lg-rank .r>:last-child{grid-column:2/-1}}
 </style>
 
 
@@ -818,7 +837,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
       <div class="classlist" id="classlist"></div>
     </div>
     <div class="card stack" id="admin-card" hidden>
-      <h2 style="margin:0">老師帳號管理</h2>
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">老師帳號管理</h2><button class="btn ghost sm" id="a-league">對戰聯盟設定</button></div>
       <div class="stack" id="applist" style="gap:8px"></div>
       <p class="small muted" style="margin:0">核准後，請自己通知老師「可以用 Google 登入了」。老師不需要密碼，也不會有忘記密碼的問題。</p>
       <div class="tlist" id="tlist"></div>
@@ -857,6 +876,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
         <button class="btn ghost" id="b-subj" title="對戰時除了自然科學島，還可以加入哪些科目的題目">對戰題目：自然科</button>
         <button class="btn ghost" id="b-gear" title="同學對戰、白板對戰時，每位學生套用自己在科學島的服裝加成">服裝加成：開</button>
         <button class="btn orange" id="b-mis">本節任務</button>
+        <button class="btn" id="b-league" title="和其他班級的理化獸比賽，打下盟主班就換旗">對戰聯盟</button>
         <button class="btn" id="b-duel" title="開放一段時間，讓學生用自己的手機私下組隊對戰（不會出現在白板上）">私人對戰</button>
         <button class="btn" id="b-live" aria-pressed="false" title="學生切走畫面 10 秒沒回來會通知你；綠燈在操作、黃燈沒動或切走、紅燈離開中、灰燈沒上線">課堂監控</button>
         <button class="btn ghost" id="b-refresh" aria-label="重新整理">重新整理</button>
@@ -891,6 +911,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
         <div class="card stack" id="lab-train"></div>
         <div class="card stack isle-card" id="lab-isle" hidden></div>
         <div class="card stack" id="lab-arena"></div>
+        <div class="card stack" id="lab-league" hidden></div>
       </div>
     </div>
   </section>
@@ -905,7 +926,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 <div class="toast" id="toast" hidden></div>
 
 <div id="bf" hidden></div><div id="rc-ov" hidden></div><div id="rc-bar" hidden role="button" tabindex="0">戰鬥進行中・點這裡回到戰場</div>
-<script src="stand-img.js?v=1"></script><script src="stand.js?v=20261128k"></script>
+<script src="stand-img.js?v=1"></script><script src="stand.js?v=20261128m"></script>
 <script></script>
 <script></script>
 <script>
@@ -2037,6 +2058,7 @@ function renderLab(keepArena) {
     '<div class="ar-sec" id="a-wb" hidden></div><div class="ar-sec" id="a-duel" hidden></div>';
   if ($('#a-mates')) { $('#a-mates').onclick = function () { arenaPick(this); }; }
   if (window.fbRoom) { rcStart(); rcLabel(); duRender(); duOnline(); }
+  leagueCard();
 
   /* 學校網站版：到自然科學島練功 */
   var ic = $('#lab-isle');
@@ -2407,6 +2429,192 @@ function bfRender() {
   };
 }
 $('#rc-bar').onclick = function () { RCs.min = false; DU.min = false; bfRender(); };
+
+/* ---------- 理化獸對戰聯盟：一班一座小島，打下盟主班 5 隻防守獸就換旗 ---------- */
+var LG = { st: null, at: 0, pub: {}, bonus: '', busy: false };
+var LG_FLAG = '<svg class="lg-flag" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22V3" stroke="#6b4b2a" stroke-width="2.2" stroke-linecap="round"/><path d="M6 4h12l-3 4 3 4H6z" fill="#e8473a"/><circle cx="11" cy="8" r="1.8" fill="#ffd34d"/></svg>';
+function lgName(st, code) { var t = st && st.teams[code]; return (t && t.name) || '未命名隊伍'; }
+function lgMD(w) { var p = w.split('-'); return Number(p[1]) + '/' + Number(p[2]); }
+function lgHours(c) { var f = function (h) { return (h < 10 ? '0' : '') + h + ':00'; }; return c.from === c.to ? '全天開放' : f(c.from) + '～' + f(c.to); }
+function lgRank(st, code) { var i = -1; st.scores.forEach(function (o, k) { if (o.code === code) i = k; }); return i < 0 ? null : { n: i + 1, o: st.scores[i] }; }
+function lgSubj(c) { var n = c.qnat === false && c.qsubj.length ? [] : ['自然科']; (c.qsubj || []).forEach(function (k) { if (SUBJ[k]) n.push(SUBJ[k].name); }); return n.join('＋'); }
+function lgToday() { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date()); } catch (e) { return new Date().toISOString().slice(0, 10); } }
+/* 研究室的聯盟卡片（老師開啟參賽的班級才看得到） */
+function leagueCard(force) {
+  var box = $('#lab-league'); if (!box || !window.fbLeague || !S.auth) return;
+  if (LG.st && !force && Date.now() - LG.at < 30000) { renderLeagueCard(); return; }
+  if (LG.busy) return; LG.busy = true;
+  window.fbLeague.load('S').then(function (st) {
+    LG.busy = false; LG.st = st; LG.at = Date.now();
+    var me = st.teams[S.auth.code];
+    if (!me || !me.on) { box.hidden = true; return; }
+    renderLeagueCard();
+    if (!LG.pub[st.w]) {
+      LG.pub[st.w] = 1;
+      call('leagueDef', S.auth).then(function (d) { S.lgLeft = d.left; return window.fbLeague.publishDef('S', st, S.auth.code, d); }).then(renderLeagueCard).catch(function () { LG.pub[st.w] = 0; });
+    }
+    if (st.flag && st.flag.code === S.auth.code && LG.bonus !== lgToday()) {
+      LG.bonus = lgToday();
+      call('leagueBonus', Object.assign({ champ: true }, S.auth)).then(function (r) {
+        if (!r.gain) return;
+        S.me = r.me; renderLab(true); toast('盟主班福利：理化獸 +' + r.gain + ' 經驗');
+        r.events.forEach(function (ev) { if (ev.evolved) revealEvolve(r.me.mons[ev.i]); });
+      }).catch(function () {});
+    }
+  }).catch(function () { LG.busy = false; box.hidden = true; });
+}
+function renderLeagueCard() {
+  var box = $('#lab-league'), st = LG.st; if (!box || !st) return;
+  var code = S.auth.code, me = st.teams[code] || {}; if (!me.on) { box.hidden = true; return; }
+  box.hidden = false;
+  var left = S.lgLeft == null ? window.fbLeague.L.PER_DAY : S.lgLeft, rk = lgRank(st, code), champ = st.flag && st.teams[st.flag.code] ? st.flag.code : '';
+  var nameRow = me.name ? '<b>' + esc(me.name) + '</b>' : '<span class="muted">還沒有隊名</span>';
+  if (me.pend) nameRow += '<span class="small muted">（「' + esc(me.pend) + '」等老師審核）</span>';
+  box.innerHTML = '<div class="row" style="justify-content:space-between"><h2 style="margin:0">理化獸對戰聯盟</h2><span class="pill">今天還能打 ' + left + ' 場</span></div>' +
+    '<div class="lg-champ">' + (champ ? LG_FLAG + '<span>盟主：<b>' + esc(lgName(st, champ)) + '</b>' + (champ === code ? '（就是我們班！每天每人 +' + window.fbLeague.L.CHAMP_XP + ' 經驗）' : '') + '</span>' : '<span>還沒有盟主：本週積分第一名的班級，週日結算後成為第一任盟主。</span>') + '</div>' +
+    '<div class="small">我們的隊名：' + nameRow + ' <button class="btn ghost sm" id="lg-nm">' + (me.name || me.pend ? '改隊名' : '取隊名') + '</button></div>' +
+    '<div class="small muted">本週 ' + lgMD(st.w) + '～' + lgMD(window.fbLeague.addDays(st.w, 6)) + '・' + (rk ? '我們班第 ' + rk.n + ' 名（' + rk.o.score + ' 分）' : '還沒有成績') + '・開放 ' + lgHours(st.cfg) + '・題目：' + esc(lgSubj(st.cfg)) + '</div>' +
+    '<div class="row"><button class="btn big" id="lg-go">進入聯盟島</button>' + (st.open ? '' : '<span class="small muted">現在不是開放時間</span>') + '</div>';
+  $('#lg-go').onclick = function () { openLeague(); };
+  $('#lg-nm').onclick = function () { lgNameOv(); };
+}
+function lgNameOv() {
+  openOv('<div class="ov-head"><h2>幫我們班取隊名</h2><button class="x" aria-label="關閉">×</button></div>' +
+    '<p class="small muted" style="margin:0">隊名會顯示在聯盟島上，其他班級都看得到。最多 ' + window.fbLeague.L.NAME + ' 個字，老師審核通過才會換上。不要用同學的名字。</p>' +
+    '<label class="f">隊名<input type="text" id="lg-nmi" maxlength="' + window.fbLeague.L.NAME + '" placeholder="例如：雷霆實驗室"></label>' +
+    '<div class="err" id="lg-nme" hidden></div><div><button class="btn green" id="lg-nmok">送出給老師審核</button></div>');
+  $('#lg-nmok').onclick = function () {
+    var b = this; busy(b, true, '送出中'); showErr('#lg-nme');
+    window.fbLeague.propose(S.auth.code, S.auth.seat, $('#lg-nmi').value).then(function () { closeOv(); toast('已送出，老師審核通過後就會換上'); leagueCard(true); })
+      .catch(function (e) { showErr('#lg-nme', e); busy(b, false); });
+  };
+}
+/* 聯盟島：每班一座小島，盟主插旗 */
+function lgIsle(st, code, mine) {
+  var t = st.teams[code], champ = st.flag && st.flag.code === code, rk = lgRank(st, code);
+  var down = mine ? [] : window.fbLeague.hits(st, code, S.auth.code), def = t.def || [];
+  var icons = def.map(function (m, i) { var off = down.indexOf(i) >= 0; return '<img src="' + STAND[m.el + m.stage] + '" alt="' + esc(m.mon) + (off ? '（已擊倒）' : '') + '" class="' + (off ? 'off' : '') + '">'; }).join('');
+  var foes = mine ? [] : window.fbLeague.foes(st, code, S.auth.code), left = S.lgLeft == null ? window.fbLeague.L.PER_DAY : S.lgLeft;
+  var why = mine ? '' : !def.length ? '還沒有防守隊' : !st.open ? '不在開放時間' : left <= 0 ? '今天的場數打完了' : !foes.length ? '已全部擊倒' : '';
+  return '<div class="lg-isle' + (champ ? ' champ' : '') + (mine ? ' mine' : '') + '">' +
+    '<svg class="lg-land" viewBox="0 0 120 56" aria-hidden="true"><ellipse cx="60" cy="40" rx="56" ry="14" fill="#e9d29a"/><ellipse cx="60" cy="34" rx="46" ry="12" fill="#7cc36b"/><ellipse cx="44" cy="30" rx="16" ry="6" fill="#93d37f"/></svg>' +
+    (champ ? '<div class="lg-crown">' + LG_FLAG + '<b>盟主</b></div>' : '') +
+    '<div class="lg-def">' + (icons || '<span class="small muted">還沒有防守隊</span>') + '</div>' +
+    '<b class="lg-nm">' + esc(lgName(st, code)) + '</b>' +
+    '<span class="small muted">' + (rk ? '第 ' + rk.n + ' 名・' + rk.o.score + ' 分' : '') + (mine ? '・我們班' : def.length ? '・本輪擊倒 ' + down.length + '/' + def.length : '') + '</span>' +
+    (mine ? '' : '<button class="btn sm' + (champ ? ' orange' : '') + '" data-lg="' + esc(code) + '"' + (why ? ' disabled' : '') + '>' + (why || (champ ? '挑戰盟主' : '挑戰')) + '</button>') + '</div>';
+}
+function openLeague() {
+  var draw = function () {
+    var st = LG.st, mine = S.auth.code, codes = Object.keys(st.teams).filter(function (c) { return st.teams[c].on; });
+    codes.sort(function (a, b) { var f = st.flag ? st.flag.code : ''; return (b === f) - (a === f) || (b === mine) - (a === mine) || ((lgRank(st, a) || { n: 99 }).n - (lgRank(st, b) || { n: 99 }).n); });
+    var left = S.lgLeft == null ? window.fbLeague.L.PER_DAY : S.lgLeft, last = st.last;
+    openOv('<div class="ov-head"><h2>理化獸對戰聯盟島</h2><button class="x" aria-label="關閉">×</button></div>' +
+      '<p class="small muted" style="margin:0">本週 ' + lgMD(st.w) + '～' + lgMD(window.fbLeague.addDays(st.w, 6)) + '（週日 24:00 結算）・開放 ' + lgHours(st.cfg) + '・今天還能打 ' + left + ' 場。每場最多面對 ' + window.fbLeague.L.FOES + ' 隻防守獸，雙方統一 Lv' + window.fbLeague.L.LV + '、不算服裝，比答題。擊倒的防守獸會記在全班，打下盟主班全部防守獸就換旗。</p>' +
+      (last && last.champ ? '<p class="small" style="margin:0">上週盟主：<b>' + esc(lgName(st, last.champ)) + '</b></p>' : '') +
+      '<div class="lg-sea">' + codes.map(function (c) { return lgIsle(st, c, c === mine); }).join('') + '</div>' +
+      '<h3 style="margin:4px 0 0">本週排名</h3><div class="lg-rank">' + (st.scores.length ? st.scores.map(function (o, i) {
+        return '<div class="r' + (o.code === mine ? ' me' : '') + '"><b class="num">' + (i + 1) + '</b><span>' + (st.flag && st.flag.code === o.code ? LG_FLAG : '') + esc(lgName(st, o.code)) + '</span><span class="num">' + o.score + ' 分</span><span class="small muted num">答對 ' + (o.score || o.acc ? Math.round(o.acc * 100) + '%' : '–') + '</span></div>';
+      }).join('') : '<p class="muted small">還沒有班級參賽。</p>') + '</div>' +
+      '<p class="small muted" style="margin:0">班級分數＝本週擊倒防守獸數前 ' + window.fbLeague.L.TOP + ' 名同學的加總，同分比答對率。</p>', 'wide');
+    $('#ov-box').querySelectorAll('[data-lg]').forEach(function (b) { b.onclick = function () { lgChallenge(b.dataset.lg, b); }; });
+  };
+  if (LG.st && Date.now() - LG.at < 15000) draw();
+  else window.fbLeague.load('S').then(function (st) { LG.st = st; LG.at = Date.now(); draw(); }).catch(function (e) { toast(rulesMsg(e).replace('同學對戰', '對戰聯盟')); });
+}
+function lgChallenge(code, btn) {
+  var st = LG.st, foes = window.fbLeague.foes(st, code, S.auth.code), auth = S.auth;
+  busy(btn, true, '準備中');
+  call('leagueStart', Object.assign({ target: code, foes: foes, foeName: lgName(st, code) + (st.flag && st.flag.code === code ? '（盟主）' : '') + ' 防守隊', q: { qnat: st.cfg.qnat, qsubj: st.cfg.qsubj }, open: st.open }, auth)).then(function (r) {
+    closeOv(); S.lgLeft = r.left;
+    var tok = r.cfg.tok, res = null, rec = null;
+    openBattle(r.cfg, {
+      'cb-go': function () { call('leagueGo', Object.assign({ tok: tok }, auth)).then(function (x) { S.lgLeft = x.left; }).catch(function () {}); },
+      'cb-end': function (d) {
+        call('leagueEnd', Object.assign({ tok: tok, result: d.result, used: d.used, ko: d.ko || [], asked: d.asked, right: d.right }, auth)).then(function (x) {
+          res = x; S.me = x.me; S.lgLeft = x.left;
+          if (d.result === 'quit' && !x.counted) { closeBattle(); renderLab(); return; }
+          return window.fbLeague.record(LG.st, { code: auth.code, seat: auth.seat, target: x.target, ko: x.ko, asked: x.asked, right: x.right }).then(function (o) {
+            rec = o; LG.at = 0;
+            reply({ t: 'cb-reward', html: '<b class="num">+' + x.xpGain + '</b><span>每隻出戰的理化獸各得 XP・擊倒防守獸 ' + x.ko.length + ' 隻' + (o.captured ? '・打下盟主，我們班換旗了！' : o.cleared ? '・這座島的防守隊全部擊倒，已補滿' : o.n ? '・全班本輪已擊倒 ' + o.down + '/' + o.n : '') + '</span>' });
+          });
+        }).catch(function (e) { reply({ t: 'cb-reward', html: '<span>' + esc(rulesMsg(e).replace('同學對戰', '對戰聯盟')) + '</span>' }); });
+      },
+      close: function () {
+        renderLab();
+        if (rec && rec.captured) openOv('<div class="ov-head"><h2>換旗了！</h2><button class="x" aria-label="關閉">×</button></div><div class="lg-champ big">' + LG_FLAG + '<span>我們班打下盟主的全部防守獸，成為新的盟主！</span></div><p class="small muted" style="margin:0">盟主班每位同學每天 +' + window.fbLeague.L.CHAMP_XP + ' 經驗，守住旗子就一直有。</p>');
+        if (!res) return;
+        var chain = Promise.resolve();
+        res.events.forEach(function (ev) { if (ev.evolved) chain = chain.then(function () { return revealEvolve(res.me.mons[ev.i]); }); });
+        if (res.newEgg >= 0) chain = chain.then(function () { return revealEgg(res.me.mons[res.newEgg]); });
+      }
+    });
+  }).catch(function (e) { toast(e.message); }).then(function () { busy(btn, false); });
+}
+/* 老師：班級參賽開關、隊名審核、本週成績 */
+function lgApproveRow(st, code, admin) {
+  var t = st.teams[code] || {};
+  if (!t.pend) return '';
+  return '<div class="trow"><span>' + (admin ? '<span class="small muted">' + esc(code) + ' 班・</span>' : '') + '學生提的隊名：<b>' + esc(t.pend) + '</b>' + (t.name ? '<br><span class="small muted">目前：' + esc(t.name) + '</span>' : '') + '</span>' +
+    '<button class="btn green sm" data-lgok="' + esc(code) + '">核准</button><button class="btn ghost sm" data-lgno="' + esc(code) + '">退回</button></div>';
+}
+function lgBindApprove(st, after) {
+  $('#ov-box').querySelectorAll('[data-lgok]').forEach(function (b) { b.onclick = function () { var c = b.dataset.lgok; busy(b, true, ''); window.fbLeague.setTeam('T', c, { name: st.teams[c].pend, pend: null, pendBy: null }).then(function () { toast('隊名已核准'); after(); }).catch(function (e) { toast(rulesMsg(e).replace('同學對戰', '對戰聯盟')); busy(b, false); }); }; });
+  $('#ov-box').querySelectorAll('[data-lgno]').forEach(function (b) { b.onclick = function () { busy(b, true, ''); window.fbLeague.setTeam('T', b.dataset.lgno, { pend: null, pendBy: null }).then(function () { toast('已退回'); after(); }).catch(function (e) { toast(e.message); busy(b, false); }); }; });
+}
+function openLeagueT() {
+  var code = S.board.cls.code;
+  var paint = function (st) {
+    var t = st.teams[code] || {}, rk = lgRank(st, code), wk = st.wk[code] || {};
+    var top = Object.keys(wk).map(function (s) { var o = wk[s] || {}; return { seat: Number(s), k: Number(o.k) || 0, a: Number(o.a) || 0, r: Number(o.r) || 0 }; }).sort(function (x, y) { return y.k - x.k || y.r - x.r; });
+    openOv('<div class="ov-head"><h2>理化獸對戰聯盟</h2><button class="x" aria-label="關閉">×</button></div>' +
+      '<p class="small muted" style="margin:0">參賽後，學生可以在家用手機挑戰其他班級的防守隊（班上最強的 5 隻，每位學生最多 1 隻，每週選一次）。每人每天 ' + window.fbLeague.L.PER_DAY + ' 場，開放時間 ' + lgHours(st.cfg) + '，題目：' + esc(lgSubj(st.cfg)) + '（由網管設定）。其他班只看得到隊名和理化獸，看不到姓名和座號。</p>' +
+      '<div class="row"><button class="btn ' + (t.on ? 'ghost' : 'green') + '" id="lg-on">' + (t.on ? '退出聯盟' : '參加聯盟') + '</button><span class="small">' + (t.on ? '<b>參賽中</b>' : '目前沒有參賽') + '・隊名：' + esc(t.name || '未命名') + (st.flag && st.flag.code === code ? '・<b>本班是盟主</b>' : '') + '</span></div>' +
+      lgApproveRow(st, code) +
+      (t.on ? '<div class="small">本週' + (rk ? '第 ' + rk.n + ' 名・' + rk.o.score + ' 分・答對 ' + Math.round(rk.o.acc * 100) + '%' : '還沒有成績') + '</div>' +
+        '<div class="lg-def">' + (t.def || []).map(function (m) { return '<img src="' + STAND[m.el + m.stage] + '" alt="' + esc(m.mon) + '" title="' + esc(m.mon + ' Lv' + m.lv) + '">'; }).join('') + '</div>' +
+        (top.length ? '<details><summary class="small">本週出戰紀錄（只有老師看得到）</summary><div class="lg-rank">' + top.map(function (o, i) { return '<div class="r' + (i < window.fbLeague.L.TOP ? '' : ' off') + '"><b class="num">' + o.seat + ' 號</b><span>' + esc(stuName(o.seat).replace(/^\d+ 號 ?/, '')) + '</span><span class="num">擊倒 ' + o.k + '</span><span class="small muted num">答對 ' + o.r + '/' + o.a + '</span></div>'; }).join('') + '</div><p class="small muted" style="margin:0">灰色的同學不在前 ' + window.fbLeague.L.TOP + ' 名，不計入班級分數。</p></details>' : '') : ''), 'wide');
+    $('#lg-on').onclick = function () {
+      var b = this, on = !t.on; busy(b, true, '儲存中');
+      window.fbLeague.setTeam('T', code, { on: on }).then(function () {
+        if (!on) return;
+        return call('leagueTDef', { tok: S.tok, code: code }).then(function (d) { return window.fbLeague.publishDef('T', st, code, d); });
+      }).then(function () { toast(on ? '已參加對戰聯盟，學生的研究室會出現聯盟卡片' : '已退出對戰聯盟'); go(); }).catch(function (e) { toast(rulesMsg(e).replace('同學對戰', '對戰聯盟')); busy(b, false); });
+    };
+    lgBindApprove(st, go);
+  };
+  var go = function () { window.fbLeague.load('T').then(paint).catch(function (e) { toast(rulesMsg(e).replace('同學對戰', '對戰聯盟')); }); };
+  if (!window.fbLeague) { toast('對戰聯盟要在連線版使用。'); return; }
+  go();
+}
+/* 網管：開放時間、題目範圍、全部班級的隊名審核 */
+function openLeagueA() {
+  var go = function () { window.fbLeague.load('T').then(paint).catch(function (e) { toast(rulesMsg(e).replace('同學對戰', '對戰聯盟')); }); };
+  var paint = function (st) {
+    var c = st.cfg, sel = {}; c.qsubj.forEach(function (k) { sel[k] = 1; }); var nat = c.qnat !== false;
+    var hrs = function (id, v) { var o = ''; for (var h = 0; h <= 24; h++) o += '<option value="' + h + '"' + (h === v ? ' selected' : '') + '>' + (h < 10 ? '0' : '') + h + ':00</option>'; return '<select id="' + id + '">' + o + '</select>'; };
+    var codes = Object.keys(st.teams);
+    openOv('<div class="ov-head"><h2>對戰聯盟設定</h2><button class="x" aria-label="關閉">×</button></div>' +
+      '<div class="row"><b class="small">開放時間（台灣時間）</b>' + hrs('lga-f', c.from) + '<span>到</span>' + hrs('lga-t', c.to) + '<span class="small muted">兩個一樣＝全天開放</span></div>' +
+      '<div class="stack" style="gap:6px"><b class="small">題目科目</b><div class="row" id="lga-sj"><button type="button" class="chip" id="lga-nat" aria-pressed="' + nat + '">自然科學島</button>' +
+      Object.keys(SUBJ).map(function (k) { return '<button type="button" class="chip" data-s="' + k + '" aria-pressed="' + !!sel[k] + '">' + esc(SUBJ[k].name) + '</button>'; }).join('') + '</div></div>' +
+      '<div class="row"><button class="btn green" id="lga-save">儲存設定</button></div>' +
+      '<h3 style="margin:6px 0 0">隊名審核</h3>' + (codes.map(function (k) { return lgApproveRow(st, k, true); }).join('') || '<p class="small muted" style="margin:0">沒有待審的隊名。</p>') +
+      '<h3 style="margin:6px 0 0">參賽班級</h3><div class="lg-rank">' + (codes.filter(function (k) { return st.teams[k].on; }).map(function (k) { var rk = lgRank(st, k); return '<div class="r"><b class="num">' + esc(k) + '</b><span>' + (st.flag && st.flag.code === k ? LG_FLAG : '') + esc(lgName(st, k)) + '</span><span class="num">' + (rk ? rk.o.score + ' 分' : '–') + '</span><span class="small muted">' + (st.teams[k].def || []).length + ' 隻防守</span></div>'; }).join('') || '<p class="small muted">還沒有班級參賽。老師在班級看板按「對戰聯盟」就能參加。</p>') + '</div>', 'wide');
+    $('#lga-sj').querySelectorAll('.chip[data-s]').forEach(function (x) { x.onclick = function () { var k = x.dataset.s; if (sel[k]) delete sel[k]; else sel[k] = 1; x.setAttribute('aria-pressed', !!sel[k]); }; });
+    $('#lga-nat').onclick = function () { nat = !nat; this.setAttribute('aria-pressed', nat); };
+    $('#lga-save').onclick = function () {
+      if (!nat && !Object.keys(sel).length) { toast('自然科學島和其他科目至少要勾選一個'); return; }
+      var b = this; busy(b, true, '儲存中');
+      window.fbLeague.setCfg({ from: Number($('#lga-f').value), to: Number($('#lga-t').value), qnat: nat, qsubj: Object.keys(sel) }).then(function () { toast('聯盟設定已儲存'); go(); }).catch(function (e) { toast(rulesMsg(e).replace('同學對戰', '對戰聯盟')); busy(b, false); });
+    };
+    lgBindApprove(st, go);
+  };
+  if (!window.fbLeague) { toast('對戰聯盟要在連線版使用。'); return; }
+  go();
+}
+$('#b-league').onclick = function () { openLeagueT(); };
+$('#a-league').onclick = function () { openLeagueA(); };
 
 /* ---------- 同學對戰：線上燈號、PK 邀請、私人組隊房間 ---------- */
 var DU = { on: false, ok: true, online: {}, invites: [], rooms: [], me: null, min: false, mates: null, inv: null, seen: {}, tick: 0, win: false, stop: null };

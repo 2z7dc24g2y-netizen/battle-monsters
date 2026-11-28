@@ -29,6 +29,9 @@ var GAME = {
   TOKEN_SEC: 21600      // 網管、老師登入一次可用 6 小時
 };
 
+/* 理化獸對戰聯盟：統一等級、每天場數、防守隊隻數、每場對手數、班級計分人數、盟主每日經驗、隊名字數 */
+var LEAGUE = { LV: 20, PER_DAY: 3, DEF: 5, FOES: 3, TOP: 10, CHAMP_XP: 100, NAME: 12 };
+
 var ORDER = ['fire', 'water', 'wood', 'earth', 'elec'];
 
 /* 五系數值與說明：與自然科學島「理化獸競技島」相同 */
@@ -1344,7 +1347,7 @@ var FBX = (function () {
   }
 
   /* ---------- 入口：取代原本的伺服器呼叫 ---------- */
-  var STAFF_ACT = /^(teacherLogin|logout|changePin|admin|board|updateClass|createClass|classCo|pins|resetPin|reward|teacherRoster|teacherAward|classQuestion|liveBoard|duelSet|mission(Set|End)$|room(T|Open|Close|Assign|Team))/;
+  var STAFF_ACT = /^(teacherLogin|logout|changePin|admin|board|updateClass|createClass|classCo|pins|resetPin|reward|teacherRoster|teacherAward|classQuestion|liveBoard|duelSet|leagueT|mission(Set|End)$|room(T|Open|Close|Assign|Team))/;
   function run(action, p) {
     var r = JSON.parse(runApi_(Store, action, p));
     if (!r.ok) throw new Error(r.error);
@@ -1576,6 +1579,117 @@ window.fbDiary = {
   },
   del: function (id) { if (!window.fbDiary.canWrite()) return Promise.reject(new Error('只有網管可以刪文。')); return FBX.dbS.ref('diary/' + id).set(null); }
 };
+/* ---------- 理化獸對戰聯盟（Firebase：league/） ----------
+ * league/cfg                      網管設定 { from, to（台灣時間幾點到幾點開放）, qnat, qsubj }
+ * league/teams/{班}               { on（老師開關）, name（審核過的隊名）, pend（學生提的隊名）, def（防守 5 隻）, defW（哪一週選的）, n（人數） }
+ * league/flag                     目前盟主 { code, since, w }
+ * league/season                   已結算到哪一週 { w }
+ * league/wk/{週}/{班}/{座號}      這週個人成績 { k 擊倒數, a 答題數, r 答對數 }（班級分數取前 10 人）
+ * league/hit/{目標班}/{我們班}    這週我們班擊倒了目標班哪幾隻 { w, r（目標是盟主時＝盟主就任時間）, s }
+ * league/hist/{週}                每週結算 { champ, top } */
+window.fbLeague = (function () {
+  var L = { LV: LEAGUE.LV, PER_DAY: LEAGUE.PER_DAY, DEF: LEAGUE.DEF, FOES: LEAGUE.FOES, TOP: LEAGUE.TOP, CHAMP_XP: LEAGUE.CHAMP_XP, NAME: LEAGUE.NAME };
+  function now() { return window.fbNow ? window.fbNow() : Date.now(); }
+  function tp(t) { return new Date(t + 8 * 3600e3); }
+  function weekOf(t) { var d = tp(t), dow = (d.getUTCDay() + 6) % 7; return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dow)).toISOString().slice(0, 10); }
+  function addDays(w, n) { var d = new Date(w + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function hourOf(t) { var d = tp(t); return d.getUTCHours() + d.getUTCMinutes() / 60; }
+  function db(role) { return role === 'T' ? FBX.dbS : FBX.dbT; }
+  function once(D, path) { return D.ref(path).once('value').then(function (s) { return s.val(); }); }
+  function cfgOf(c) { c = c || {}; var f = Number(c.from), t = Number(c.to); return { from: f >= 0 && f <= 24 ? f : 6, to: t >= 0 && t <= 24 ? t : 22, qnat: c.qnat !== false, qsubj: Array.isArray(c.qsubj) ? c.qsubj : c.qsubj ? Object.keys(c.qsubj).map(function (k) { return c.qsubj[k]; }) : [] }; }
+  function isOpen(c, t) { var h = hourOf(t == null ? now() : t); if (c.from === c.to) return true; return c.from < c.to ? h >= c.from && h < c.to : h >= c.from || h < c.to; }
+  function arr(v) { return Array.isArray(v) ? v : v ? Object.keys(v).sort(function (a, b) { return a - b; }).map(function (k) { return v[k]; }) : []; }
+  /* 班級分數：這週擊倒數前 10 名的同學加總；不到 10 人就全部加總。同分比答對率 */
+  function scores(wk, teams) {
+    return Object.keys(teams || {}).filter(function (c) { return teams[c] && teams[c].on; }).map(function (c) {
+      var list = Object.keys((wk || {})[c] || {}).map(function (s) { var o = wk[c][s] || {}; return { k: Number(o.k) || 0, a: Number(o.a) || 0, r: Number(o.r) || 0 }; })
+        .sort(function (x, y) { return y.k - x.k || y.r - x.r; }).slice(0, L.TOP);
+      var k = 0, a = 0, r = 0; list.forEach(function (o) { k += o.k; a += o.a; r += o.r; });
+      return { code: c, name: teams[c].name || '', score: k, acc: a ? r / a : 0, players: list.length };
+    }).sort(function (x, y) { return y.score - x.score || y.acc - x.acc || (x.code < y.code ? -1 : 1); });
+  }
+  /* 換週：第一個看到新的一週的人負責結算上一週；還沒有盟主時，上週積分第一名的班成為盟主 */
+  function rollover(D, st) {
+    var w = st.w, s = st.season;
+    if (s && s.w === w) return Promise.resolve(false);
+    return D.ref('league/season').transaction(function (cur) { if (cur && cur.w === w) return; return { w: w, prev: (cur && cur.w) || '', at: now() }; }).then(function (r) {
+      if (!r.committed) return false;
+      var prev = (s && s.w) || '';
+      if (!prev) return true;
+      return once(D, 'league/wk/' + prev).then(function (wk) {
+        var sc = scores(wk, st.teams), top = sc[0], jobs = [];
+        var champ = st.flag ? st.flag.code : '';
+        if (!champ && top && top.score > 0) {
+          champ = top.code;
+          jobs.push(D.ref('league/flag').transaction(function (f) { if (f) return; return { code: top.code, since: now(), w: w, how: 'week' }; }).then(function (x) { if (x.committed) st.flag = x.snapshot.val(); }));
+        }
+        jobs.push(D.ref('league/hist/' + prev).set({ champ: champ, top: sc.slice(0, 5).map(function (o) { return { code: o.code, name: o.name, score: o.score }; }) }));
+        jobs.push(D.ref('league/wk/' + addDays(prev, -7)).set(null));
+        return Promise.all(jobs).then(function () { return true; });
+      });
+    });
+  }
+  function load(role) {
+    var D = db(role), w = weekOf(now());
+    return Promise.all(['cfg', 'teams', 'flag', 'season', 'wk/' + w, 'hit', 'hist/' + addDays(w, -7)].map(function (k) { return once(D, 'league/' + k); })).then(function (v) {
+      var st = { w: w, cfg: cfgOf(v[0]), teams: v[1] || {}, flag: v[2] || null, season: v[3] || null, wk: v[4] || {}, hit: v[5] || {}, last: v[6] || null };
+      Object.keys(st.teams).forEach(function (c) { var t = st.teams[c]; t.def = arr(t.def); });
+      return rollover(D, st).then(function (did) { return did ? once(D, 'league/flag').then(function (f) { st.flag = f || st.flag; return st; }) : st; }, function () { return st; });
+    }).then(function (st) {
+      st.open = isOpen(st.cfg); st.scores = scores(st.wk, st.teams); st.end = addDays(w, 7); return st;
+    });
+  }
+  /* 目標班的「這一輪」：盟主看就任時間（換旗後防守隊補滿），其他班每週重來 */
+  function reign(st, code) { return st.flag && st.flag.code === code ? Number(st.flag.since) || 0 : 0; }
+  function hits(st, target, mine) {
+    var h = ((st.hit || {})[target] || {})[mine];
+    return h && h.w === st.w && Number(h.r) === reign(st, target) ? Object.keys(h.s || {}).map(Number) : [];
+  }
+  function foes(st, target, mine) {
+    var t = st.teams[target], down = hits(st, target, mine), out = [];
+    (t && t.def || []).forEach(function (m, i) { if (down.indexOf(i) < 0 && out.length < L.FOES) out.push({ slot: i, el: m.el, stage: m.stage, mon: m.mon }); });
+    return out;
+  }
+  /* 防守隊每週選一次（換旗、換週才換）；還沒有防守隊時立刻補上 */
+  function publishDef(role, st, code, d) {
+    var t = st.teams[code] || {};
+    if (t.def && t.def.length && t.defW === st.w && t.def.length >= Math.min(L.DEF, d.def.length)) return Promise.resolve(false);
+    var o = { def: d.def, defW: st.w, n: d.n };
+    return db(role).ref('league/teams/' + code).update(o).then(function () { st.teams[code] = Object.assign(t, o); return true; });
+  }
+  function setTeam(role, code, o) { return db(role).ref('league/teams/' + code).update(o); }
+  function propose(code, seat, name) {
+    name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, L.NAME);
+    if (!name) return Promise.reject(new Error('請輸入隊名。'));
+    return FBX.dbT.ref('league/teams/' + code).update({ pend: name, pendBy: Number(seat) || 0, pendAt: now() });
+  }
+  function setCfg(c) { var x = cfgOf(c); return FBX.dbS.ref('league/cfg').set({ from: x.from, to: x.to, qnat: x.qnat, qsubj: x.qsubj }); }
+  /* 聯盟戰結束：記個人成績、記擊倒；打下盟主班全部防守獸就換旗 */
+  function record(st, o) {
+    var D = FBX.dbT, w = st.w, r = reign(st, o.target), n = ((st.teams[o.target] || {}).def || []).length, out = { captured: false, cleared: false, down: 0, n: n };
+    var jobs = [D.ref('league/wk/' + w + '/' + o.code + '/' + o.seat).transaction(function (c) { c = c || { k: 0, a: 0, r: 0 }; c.k = (Number(c.k) || 0) + o.ko.length; c.a = (Number(c.a) || 0) + (o.asked || 0); c.r = (Number(c.r) || 0) + (o.right || 0); return c; })];
+    if (o.ko.length && n) jobs.push(D.ref('league/hit/' + o.target + '/' + o.code).transaction(function (h) {
+      if (!h || h.w !== w || Number(h.r) !== r) h = { w: w, r: r, s: {} };
+      if (!h.s) h.s = {};
+      o.ko.forEach(function (i) { h.s[i] = 1; });
+      return h;
+    }).then(function (x) {
+      var h = x.snapshot.val() || {}, s = Object.keys(h.s || {});
+      out.down = s.length;
+      if (s.length < n) return;
+      var reset = function () { return D.ref('league/hit/' + o.target + '/' + o.code).set({ w: w, r: r, s: {} }); };
+      if (st.flag && st.flag.code === o.target) {
+        return D.ref('league/flag').transaction(function (f) {
+          if (!f || f.code !== o.target || Number(f.since) !== r) return;
+          return { code: o.code, since: now(), w: w, from: o.target, how: 'capture' };
+        }).then(function (y) { if (y.committed) { out.captured = true; st.flag = y.snapshot.val(); } return reset(); });
+      }
+      out.cleared = true; return reset();
+    }));
+    return Promise.all(jobs).then(function () { return out; });
+  }
+  return { L: L, load: load, foes: foes, hits: hits, reign: reign, publishDef: publishDef, setTeam: setTeam, propose: propose, setCfg: setCfg, record: record, scores: scores, weekOf: weekOf, addDays: addDays, isOpen: isOpen, cfgOf: cfgOf };
+})();
 window.HATCH_FB = true;
 
 /* ===== Firebase 版要改寫的規則（接在 logic.js 與 fb.js 之後） ===== */
@@ -1653,6 +1767,89 @@ API.deleteClass = function (S, p) {
   if (who.role !== 'admin' && String(cls.owner || '') !== who.id) fail_('只有建立這個班級的導師（或網管）可以刪除班級。');
   S.delClass(cls.code);
   return { classes: classesFor_(S, who) };
+};
+
+
+/* ============================================================
+ *  理化獸對戰聯盟：一班一座小島，各班互相挑戰，打下盟主班 5 隻防守獸就換旗
+ *  聯盟資料放在 Firebase 的 league/（見 window.fbLeague），這裡只處理學生自己的紀錄與經驗
+ * ============================================================ */
+function lgLeft_(S, st) { var g = ext_(st).lg; return g && g.d === S.today() ? Math.max(0, LEAGUE.PER_DAY - (Number(g.n) || 0)) : LEAGUE.PER_DAY; }
+/* 班上最強 5 隻：每位學生只派自己等級最高的一隻，同級比經驗（不記座號、姓名） */
+function lgDef_(S, code) {
+  return S.listStudents(code).map(function (st) {
+    var best = null;
+    monsOf_(st).forEach(function (m) { if (m.hatched && (!best || m.level > best.level || (m.level === best.level && m.xp > best.xp))) best = m; });
+    return best ? { seat: st.seat, m: best } : null;
+  }).filter(Boolean).sort(function (a, b) { return b.m.level - a.m.level || b.m.xp - a.m.xp || a.seat - b.seat; }).slice(0, LEAGUE.DEF).map(function (x) {
+    var stg = stageOf(x.m.level); return { el: x.m.element, stage: stg, mon: ELEMENTS[x.m.element].stages[stg - 1], lv: x.m.level };
+  });
+}
+API.leagueDef = function (S, p) {
+  var a = authStudent_(S, p);
+  return { code: a.cls.code, def: lgDef_(S, a.cls.code), n: S.listStudents(a.cls.code).length, left: lgLeft_(S, a.st) };
+};
+API.leagueTDef = function (S, p) {
+  var cls = myClass_(S, authStaff_(S, p), p.code);
+  return { code: cls.code, def: lgDef_(S, cls.code), n: S.listStudents(cls.code).length };
+};
+/* 出戰：p.foes = 對方還沒被我們班擊倒的防守獸（最多 3 隻，slot＝防守位置），雙方統一 Lv20、不算服裝 */
+API.leagueStart = function (S, p) {
+  var a = authStudent_(S, p), st = a.st, x = ext_(st);
+  var mine = teamOf_(st);
+  if (!mine.length) fail_('你的蛋還沒孵化，先完成每日訓練讓它孵出來吧！');
+  if (p.open === false) fail_('現在不是聯盟開放時間。');
+  if (lgLeft_(S, st) <= 0) fail_('今天的 ' + LEAGUE.PER_DAY + ' 場聯盟戰已經打完，明天再來。');
+  if (String(p.target || '') === String(a.cls.code)) fail_('不能挑戰自己的班級。');
+  var foes = (Array.isArray(p.foes) ? p.foes : []).slice(0, LEAGUE.FOES).map(function (f) {
+    var el = ELEMENTS[f.el] ? f.el : 'fire', stg = Math.max(1, Math.min(3, Number(f.stage) || 1)), slot = Number(f.slot);
+    return { mi: slot, seat: 0, sname: '', el: el, lv: LEAGUE.LV, stage: stg, mon: ELEMENTS[el].stages[stg - 1] };
+  }).filter(function (f) { return f.mi >= 0 && f.mi < LEAGUE.DEF; });
+  if (!foes.length) fail_('這座島的防守隊都被打下了。');
+  var q = p.q || {};
+  var cfg = { mode: 'student', teamA: mine.map(function (u) { u.seat = 0; u.lv = LEAGUE.LV; return u; }), teamB: foes, cpuAns: 0.62, cpuK: 0.25,
+    foeName: String(p.foeName || '防守隊').slice(0, 20), title: '理化獸對戰聯盟',
+    note: '聯盟戰雙方統一 Lv' + LEAGUE.LV + '、不算服裝加成，比的是答題。擊倒的防守獸會記在班上，打下盟主班全部 ' + LEAGUE.DEF + ' 隻就換旗。勝利每隻出戰的理化獸 +' + GAME.XP_WIN + ' XP，輸了 +' + GAME.XP_LOSE + ' XP。開始戰鬥就算一場。' };
+  x.lpend = { tok: 'L' + Date.now() + rnd_(1000), target: String(p.target || ''), slots: foes.map(function (f) { return f.mi; }) };
+  S.saveStudent(st);
+  cfg.tok = x.lpend.tok;
+  cfg.qsubj = Array.isArray(q.qsubj) ? q.qsubj.filter(function (k) { return SUBJ_KEYS.indexOf(k) >= 0; }) : [];
+  cfg.noNatural = q.qnat === false && cfg.qsubj.length > 0;
+  return { cfg: cfg, left: lgLeft_(S, st) };
+};
+API.leagueGo = function (S, p) {
+  var a = authStudent_(S, p), st = a.st, x = ext_(st), pd = x.lpend;
+  if (!pd || String(p.tok) !== String(pd.tok) || pd.go) return { left: lgLeft_(S, st) };
+  var today = S.today(), g = x.lg && x.lg.d === today ? x.lg : { d: today, n: 0 };
+  g.n = (Number(g.n) || 0) + 1; x.lg = g; pd.go = 1; S.saveStudent(st);
+  return { left: lgLeft_(S, st) };
+};
+API.leagueEnd = function (S, p) {
+  var a = authStudent_(S, p), st = a.st, x = ext_(st), pd = x.lpend;
+  if (!pd || String(p.tok) !== String(pd.tok)) fail_('這場聯盟戰已經結算過了。');
+  delete x.lpend;
+  var ms = monsOf_(st), win = p.result === 'A', quit = p.result === 'quit' && !pd.go;
+  var used = (p.used || []).map(Number).filter(function (i, k, arr) { return i >= 0 && i < ms.length && ms[i].hatched && arr.indexOf(i) === k; });
+  var ko = quit ? [] : (p.ko || []).map(Number).filter(function (i, k, arr) { return pd.slots.indexOf(i) >= 0 && arr.indexOf(i) === k; });
+  var gain = quit ? 0 : win ? GAME.XP_WIN : GAME.XP_LOSE;
+  if (!quit) { if (win) st.wins++; else st.losses++; }
+  var ev = used.map(function (i) { var pre = stageOf(ms[i].level), ups = applyXp_(ms[i], gain); return { i: i, levelUps: ups, evolved: stageOf(ms[i].level) > pre }; });
+  st.totalXp = (Number(st.totalXp) || 0) + gain * used.length;
+  var newEgg = grantEgg_(st, ms);
+  setMons_(st, ms); S.saveStudent(st);
+  var asked = Math.max(0, Math.min(200, Number(p.asked) || 0)), right = Math.max(0, Math.min(asked, Number(p.right) || 0));
+  return { win: win, quit: quit, counted: !!pd.go, xpGain: gain, events: ev, newEgg: newEgg, ko: ko, target: pd.target, asked: quit ? 0 : asked, right: quit ? 0 : right, me: pub_(st, a.cls), left: lgLeft_(S, st) };
+};
+/* 盟主班：每位學生每天 +100 經驗給夥伴（不占科學島的每日上限） */
+API.leagueBonus = function (S, p) {
+  var a = authStudent_(S, p), st = a.st, x = ext_(st), today = S.today();
+  if (!p.champ || x.lgb === today) return { gain: 0, events: [], me: pub_(st, a.cls) };
+  var ms = monsOf_(st), li = leadOf_(st, ms), L = ms[li], ev = [];
+  if (!L.hatched) { var hi = -1; ms.forEach(function (m, i) { if (m.hatched && (hi < 0 || m.level > ms[hi].level)) hi = i; }); if (hi < 0) return { gain: 0, events: [], me: pub_(st, a.cls), egg: true }; li = hi; L = ms[li]; }
+  var pre = stageOf(L.level), ups = applyXp_(L, LEAGUE.CHAMP_XP); ev.push({ i: li, levelUps: ups, evolved: stageOf(L.level) > pre });
+  st.totalXp = (Number(st.totalXp) || 0) + LEAGUE.CHAMP_XP; x.lgb = today;
+  var newEgg = grantEgg_(st, ms); setMons_(st, ms); S.saveStudent(st);
+  return { gain: LEAGUE.CHAMP_XP, events: ev, newEgg: newEgg, me: pub_(st, a.cls) };
 };
 
 })();
