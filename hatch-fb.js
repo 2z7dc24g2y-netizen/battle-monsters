@@ -919,7 +919,7 @@ API.duelSet = function (S, p) {
 };
 /* 開房的同學要出戰陣容：p.A、p.B 是兩隊的座號；p.full = 帶全隊（PK），否則每人帶夥伴一隻 */
 /* 對戰題目可以加的科目（自然科學島一定出題）；題目本身放在前端的 q-*.js 檔 */
-var SUBJ_KEYS = ['M7A', 'M7B'];
+var SUBJ_KEYS = ['M7A', 'M7B', 'M4'];
 API.duelCfg = function (S, p) {
   var a = authStudent_(S, p), cls = a.cls, seen = {}, all = [];
   var side = function (arr) {
