@@ -1661,17 +1661,19 @@ function renderSelbar() {
     '<button class="btn sm orange" data-k="hatch" data-v="20"' + (n ? '' : ' disabled') + '>孵化 +20%</button>' +
     '<button class="btn sm green" data-k="xp" data-v="20"' + (n ? '' : ' disabled') + '>經驗 +20</button>' +
     '<button class="btn sm green" data-k="xp" data-v="50"' + (n ? '' : ' disabled') + '>經驗 +50</button>' +
+    '<button class="btn sm ghost" data-k="xpDown" data-v="20"' + (n ? '' : ' disabled') + '>經驗 −20</button>' +
+    '<button class="btn sm ghost" data-k="xpZero" data-v="0"' + (n ? '' : ' disabled') + '>經驗歸零</button>' +
     '<button class="btn sm red" data-a="end">完成</button>';
   document.body.style.paddingBottom = bar.offsetHeight + 'px';
   bar.querySelector('[data-a=all]').onclick = function () { S.board.students.forEach(function (s) { S.picked[s.seat] = 1; }); renderBoard(); };
   bar.querySelector('[data-a=end]').onclick = function () { S.select = false; S.picked = {}; renderBoard(); };
-  bar.querySelectorAll('[data-k]').forEach(function (b) { b.onclick = function () { reward(Object.keys(S.picked).map(Number), b.dataset.k, Number(b.dataset.v), b); }; });
+  bar.querySelectorAll('[data-k]').forEach(function (b) { b.onclick = function () { if (b.dataset.k === 'xpZero' && !confirm('確定把所選同學主力怪獸的經驗條歸零？')) return; reward(Object.keys(S.picked).map(Number), b.dataset.k, Number(b.dataset.v), b); }; });
 }
 function reward(seats, kind, amount, btn) {
   busy(btn, true, '加分中');
   return call('reward', { tok: S.tok, code: S.board.cls.code, seats: seats, kind: kind, amount: amount }).then(function (d) {
     S.board = d; S.picked = {}; renderBoard();
-    var words = kind === 'xp' ? '經驗 +' + amount : kind === 'hatch' ? '孵化 +' + amount + '%' : kind === 'egg' ? '拿到新的蛋' : '孵化';
+    var words = kind === 'xp' ? '經驗 +' + amount : kind === 'hatch' ? '孵化 +' + amount + '%' : kind === 'xpDown' ? '經驗 −' + amount : kind === 'xpZero' ? '經驗歸零' : kind === 'egg' ? '拿到新的蛋' : '孵化';
     toast(seats.length + ' 位同學 ' + words);
     var q = d.events.filter(function (e) { return e.hatchedNow || e.evolved; });
     return playEvents(q);

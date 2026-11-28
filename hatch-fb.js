@@ -688,13 +688,15 @@ var API = {
   reward: function (S, p) {
     var cls = myClass_(S, authStaff_(S, p), p.code), seats = (p.seats || []).map(Number), amt = Number(p.amount) || 0, events = [];
     if (!seats.length) fail_('請先選擇學生。');
-    if (['hatch', 'xp', 'hatchNow', 'egg'].indexOf(p.kind) < 0) fail_('獎勵種類不正確。');
+    if (['hatch', 'xp', 'hatchNow', 'egg', 'xpDown', 'xpZero'].indexOf(p.kind) < 0) fail_('獎勵種類不正確。');
     seats.forEach(function (seat) {
       var st = S.getStudent(cls.code, seat); if (!st) return;
       var ms = monsOf_(st), li = p.mi != null && ms[Number(p.mi)] ? Number(p.mi) : leadOf_(st, ms), ei = eggIndex_(ms);
       var ev = { seat: seat, hatchedNow: false, levelUps: 0, evolved: false, idx: li, newEgg: -1 };
       if (p.kind === 'hatch') { ev.hatchedNow = applyHatch_(ms[ei], amt); ev.idx = ei; }
       else if (p.kind === 'hatchNow') { ev.hatchedNow = applyHatch_(ms[ei], 100); ev.idx = ei; }
+      else if (p.kind === 'xpZero') { ms[li].xp = 0; }
+      else if (p.kind === 'xpDown') { var mm = ms[li], d = Math.max(0, amt); mm.xp -= d; while (mm.xp < 0 && mm.level > 1) { mm.level--; mm.xp += needXp(mm.level); } if (mm.xp < 0) mm.xp = 0; }
       else if (p.kind === 'egg') { ev.newEgg = grantEgg_(st, ms, true); }
       else { var pre = stageOf(ms[li].level), was = ms[li].hatched; ev.levelUps = applyXp_(ms[li], amt); st.totalXp = (Number(st.totalXp) || 0) + amt; ev.evolved = was && stageOf(ms[li].level) > pre; }
       if (ev.hatchedNow && ms[ev.idx]) ms[ev.idx].seenHatch = true; // 在白板上揭曉過了
