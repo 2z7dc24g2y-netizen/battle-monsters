@@ -11,7 +11,7 @@ var GAME = {
   HATCH_RIGHT: 6,       // 蛋：答對孵化 +6%
   HATCH_WRONG: 2,
   HATCH_FINISH: 10,
-  BATTLES_PER_DAY: 5,
+  BATTLES_PER_DAY: 3,     // 每天最多挑戰次數（台灣時間 00:00 重置；按下「開始戰鬥」才扣）
   XP_WIN: 15,
   XP_LOSE: 5,
   REVIEW_PER_DAY: 3,    // 每天最多放幾題錯題複習
@@ -249,16 +249,17 @@ function authStaff_(S, p, needAdmin) {
 }
 function myClass_(S, who, code) {
   var cls = getClass_(S, code);
-  if (who.role !== 'admin' && String(cls.owner || '') !== who.id) fail_('這不是你的班級。');
+  if (who.role !== 'admin' && String(cls.owner || '') !== who.id && (cls._co || []).indexOf(who.id) < 0) fail_('這不是你的班級。');
   return cls;
 }
 function newPin6_() { return String(100000 + rnd_(900000)); }
 function classesFor_(S, who) {
   var names = {}; S.listTeachers().forEach(function (t) { names[t.id] = t.name; });
-  return S.listClasses().filter(function (c) { return who.role === 'admin' || String(c.owner || '') === who.id; }).map(function (c) {
+  return S.listClasses().filter(function (c) { return who.role === 'admin' || String(c.owner || '') === who.id || (c._co || []).indexOf(who.id) >= 0; }).map(function (c) {
     c._today = S.today();
     var b = board_(S, c);
-    return { code: c.code, name: c.name, count: c.count, hatched: b.hatched, doneToday: b.doneToday, scope: c.scope || [], owner: c.owner || '', ownerName: names[c.owner] || '' };
+    return { code: c.code, name: c.name, count: c.count, hatched: b.hatched, doneToday: b.doneToday, scope: c.scope || [], owner: c.owner || '', ownerName: names[c.owner] || '',
+      mine: who.role === 'admin' || String(c.owner || '') === who.id, co: (c._co || []).slice() };
   });
 }
 function getClass_(S, code) {
@@ -900,7 +901,7 @@ API.missionA = function (S, p) {
 };
 /* ---------- 同學對戰：PK 邀請與私人組隊（不上白板） ----------
  * 老師開放時段：cls.duel = { until } 或 { always: true }（一直開放）；私人組隊房間只在開放時能開
- * 私人組隊對戰不算每天 5 次挑戰，每場都拿經驗；一對一 PK 仍算挑戰次數
+ * 私人組隊對戰不算每天 3 次挑戰，每場都拿經驗；一對一 PK 仍算挑戰次數
  * 每場由開房的同學的裝置跑戰鬥，其他人用自己的手機操作；結束後每個人各自結算自己的經驗 */
 API.duelSet = function (S, p) {
   var cls = myClass_(S, authStaff_(S, p), p.code), min = Math.round(Number(p.minutes) || 0);
@@ -922,6 +923,7 @@ API.duelCfg = function (S, p) {
   var A = side(p.A), B = side(p.B);
   if (A.map(function (x) { return x.seat; }).indexOf(a.st.seat) < 0) fail_('開房的同學要在藍隊。');
   if (!B.length) fail_('紅隊還沒有人。');
+  if (!p.full && Math.abs(A.length - B.length) > 1) fail_('兩隊人數最多只能差 1 人（目前藍隊 ' + A.length + ' 人、紅隊 ' + B.length + ' 人）。');
   var gm = gearOn_(cls) ? gearMap_(S, all) : {};
   var units = function (list) {
     var out = [];
@@ -960,7 +962,7 @@ API.duelEnd = function (S, p) {
   S.saveStudent(st);
   return { xpGain: gain, counted: counted, team: team, result: res, events: ev, newEgg: newEgg, me: pub_(st, a.cls), battlesLeft: battlesLeft_(S, st) };
 };
-var WRITE_ACTIONS = { duelSet: 1, duelEnd: 1,  missionSet: 1, missionEnd: 1, missionQ: 1, missionA: 1, teacherApply: 1, adminApprove: 1, adminReject: 1, teacherLogin: 1, changePin: 1, adminAddTeacher: 1, adminResetTeacher: 1, adminSetTeacher: 1, adminAssignClass: 1, isleSave: 1, studentLogin: 1, setLead: 1, daily: 1, answer: 1, seenHatch: 1, battleStart: 1, battleGo: 1, battleEnd: 1, createClass: 1, updateClass: 1, resetPin: 1, reward: 1, teacherAward: 1 };
+var WRITE_ACTIONS = { classCo: 1, duelSet: 1, duelEnd: 1,  missionSet: 1, missionEnd: 1, missionQ: 1, missionA: 1, teacherApply: 1, adminApprove: 1, adminReject: 1, teacherLogin: 1, changePin: 1, adminAddTeacher: 1, adminResetTeacher: 1, adminSetTeacher: 1, adminAssignClass: 1, isleSave: 1, studentLogin: 1, setLead: 1, daily: 1, answer: 1, seenHatch: 1, battleStart: 1, battleGo: 1, battleEnd: 1, createClass: 1, updateClass: 1, resetPin: 1, reward: 1, teacherAward: 1 };
 
 function runApi_(S, action, payload) {
   try {
@@ -1045,7 +1047,7 @@ var FBX = (function () {
   var cfg = window.FB_CONFIG;
   var appS = firebase.initializeApp(cfg, 'staff'), appT = firebase.initializeApp(cfg, 'stu'), appX = firebase.initializeApp(cfg, 'sec');
   var dbS = appS.database(), dbT = appT.database();
-  var C = { teachers: {}, apps: {}, classes: {}, students: {}, pins: {}, gear: {}, isle: {}, live: {} };
+  var C = { teachers: {}, apps: {}, classes: {}, students: {}, pins: {}, gear: {}, isle: {}, live: {}, co: {}, coIdx: {} };
   var ME = null;                          // 目前的老師／網管 { role, id, name }
   var STU = null;                         // 目前的學生 { code, seat, pin }
   var CUR = { db: dbS };                  // 這次動作寫入用的資料庫
@@ -1099,12 +1101,13 @@ var FBX = (function () {
       watch(db, 'students/' + code, function (v) { C.students[code] = v || {}; })];
     j.push(watch(db, 'gear/' + code, function (v) { C.gear[code] = v || {}; }));
     if (staff) {
+      j.push(watch(db, 'classCo/' + code, function (v) { C.co[code] = v || {}; }).catch(function () { C.co[code] = C.co[code] || {}; }));
       j.push(watch(db, 'pins/' + code, function (v) { C.pins[code] = v || {}; }));
       j.push(watch(db, 'live/' + code, function (v) { C.live[code] = v || {}; }));
     }
     return Promise.all(j);
   }
-  function drop() { LISTEN = {}; C = { teachers: {}, apps: {}, classes: {}, students: {}, pins: {}, gear: {}, isle: {}, live: {} }; }
+  function drop() { LISTEN = {}; C = { teachers: {}, apps: {}, classes: {}, students: {}, pins: {}, gear: {}, isle: {}, live: {}, co: {}, coIdx: {} }; }
 
   var Store = {
     today: function () { return today(); }, yesterday: function () { return today(-864e5); },
@@ -1125,14 +1128,23 @@ var FBX = (function () {
     delTeacher: function (id) { delete C.teachers[id]; put('teachers/' + id, null); },
     delClass: function (code) {
       code = String(code); var pn = C.pins[code] || {};
+      Object.keys(C.co[code] || {}).forEach(function (k) { put('coIdx/' + k + '/' + code, null); });
+      put('classCo/' + code, null); delete C.co[code];
       Object.keys(pn).forEach(function (s) { if (pn[s] && pn[s].uid) put('users/' + pn[s].uid, null); });
       ['students', 'gear', 'isle', 'live', 'pins', 'rooms'].forEach(function (n) { put(n + '/' + code, null); });
       put('classes/' + code, null);
       delete C.classes[code]; delete C.students[code]; delete C.pins[code]; delete C.gear[code]; delete C.live[code];
     },
-    listClasses: function () { return Object.keys(C.classes).map(function (k) { return clone(C.classes[k]); }); },
-    getClass: function (code) { var c = C.classes[String(code)]; return c ? norm_cls(c) : null; },
-    saveClass: function (cls) { var c = clone(cls); delete c._today; C.classes[c.code] = c; put('classes/' + c.code, c); },
+    listClasses: function () { return Object.keys(C.classes).map(function (k) { var o = clone(C.classes[k]); o._co = Object.keys(C.co[k] || {}); return o; }); },
+    getClass: function (code) { var c = C.classes[String(code)]; if (!c) return null; var o = norm_cls(c); o._co = Object.keys(C.co[String(code)] || {}); return o; },
+    saveClass: function (cls) { var c = clone(cls); Object.keys(c).forEach(function (k) { if (k.charAt(0) === '_') delete c[k]; }); C.classes[c.code] = c; put('classes/' + c.code, c); },
+    /* 共同導師：classCo/{班級}/{老師} 與 coIdx/{老師}/{班級} 兩邊一起寫（後者讓共同導師登入時找得到班級） */
+    setCo: function (code, key, on) {
+      code = String(code); var m = C.co[code] = C.co[code] || {};
+      if (on) m[key] = true; else delete m[key];
+      put('classCo/' + code + '/' + key, on ? true : null);
+      put('coIdx/' + key + '/' + code, on ? true : null);
+    },
     listStudents: function (code) { var m = C.students[String(code)] || {}; return Object.keys(m).map(function (s) { return norm(code, s, m[s]); }); },
     getStudent: function (code, seat) { var m = C.students[String(code)] || {}, r = m[Number(seat)]; return r ? norm(code, Number(seat), r) : null; },
     saveStudent: function (st) {
@@ -1230,14 +1242,27 @@ var FBX = (function () {
         C.teachers[k] = t; ME = { role: 'teacher', id: k, name: t.name };
         return watch(dbS, 'teachers/' + k, function (v) { if (v) C.teachers[k] = v; });
       }).then(function () {
-        return new Promise(function (ok, no) {
+        var own = new Promise(function (ok, no) {
           var first = true;
           dbS.ref('classes').orderByChild('owner').equalTo(k).on('value', function (s) {
-            C.classes = s.val() || {};
-            var j = Object.keys(C.classes).map(function (c) { return ensureClass(dbS, c, true); });
+            var v = s.val() || {};
+            Object.keys(C.classes).forEach(function (c) { if (!v[c] && !C.coIdx[c]) delete C.classes[c]; });
+            Object.keys(v).forEach(function (c) { C.classes[c] = v[c]; });
+            var j = Object.keys(v).map(function (c) { return ensureClass(dbS, c, true); });
             Promise.all(j).then(function () { if (first) { first = false; ok(); } }, function (e) { if (first) { first = false; no(e); } });
           }, no);
         });
+        /* 別的老師把我設成共同導師的班級（資料庫規則還沒更新時，這段失敗也不影響登入） */
+        var co = new Promise(function (ok) {
+          var first = true, done = function () { if (first) { first = false; ok(); } };
+          dbS.ref('coIdx/' + k).on('value', function (s) {
+            var v = s.val() || {};
+            Object.keys(C.coIdx).forEach(function (c) { if (!v[c] && C.classes[c] && C.classes[c].owner !== k) delete C.classes[c]; });
+            C.coIdx = v;
+            Promise.all(Object.keys(v).map(function (c) { return ensureClass(dbS, c, true).catch(function () {}); })).then(done, done);
+          }, done);
+        });
+        return Promise.all([own, co]);
       });
     });
   }
@@ -1256,7 +1281,7 @@ var FBX = (function () {
   }
 
   /* ---------- 入口：取代原本的伺服器呼叫 ---------- */
-  var STAFF_ACT = /^(teacherLogin|logout|changePin|admin|board|updateClass|createClass|pins|resetPin|reward|teacherRoster|teacherAward|classQuestion|liveBoard|duelSet|mission(Set|End)$|room(T|Open|Close|Assign|Team))/;
+  var STAFF_ACT = /^(teacherLogin|logout|changePin|admin|board|updateClass|createClass|classCo|pins|resetPin|reward|teacherRoster|teacherAward|classQuestion|liveBoard|duelSet|mission(Set|End)$|room(T|Open|Close|Assign|Team))/;
   function run(action, p) {
     var r = JSON.parse(runApi_(Store, action, p));
     if (!r.ok) throw new Error(r.error);
@@ -1463,6 +1488,20 @@ var FBX = (function () {
 })();
 window.fbCall = FBX.call;
 window.fbRoom = FBX.room;
+/* 開發者日記：diary/{id} = { title, body, tag(dev|admin|sys), pin(重要公告), img(壓縮後的圖片), at, by }。所有人可讀，只有網管可寫 */
+window.fbDiary = {
+  list: function () { return FBX.dbS.ref('diary').once('value').then(function (s) { var v = s.val() || {}; return Object.keys(v).map(function (k) { var o = v[k]; o.id = k; return o; }); }); },
+  canWrite: function () { var m = FBX.ME(); return !!(m && m.role === 'admin'); },
+  save: function (o) {
+    if (!window.fbDiary.canWrite()) return Promise.reject(new Error('只有網管登入後可以發文。'));
+    var id = o.id || ('d' + Date.now().toString(36)), rec = { title: String(o.title || '').slice(0, 60), body: String(o.body || '').slice(0, 5000), tag: ['dev', 'admin', 'sys'].indexOf(o.tag) >= 0 ? o.tag : 'dev', pin: !!o.pin, at: Number(o.at) || Date.now(), by: '網管' };
+    if (o.edited) rec.edited = Date.now();
+    if (o.img) rec.img = String(o.img);
+    if (!rec.title.trim()) return Promise.reject(new Error('請輸入標題。'));
+    return FBX.dbS.ref('diary/' + id).set(rec).then(function () { return id; });
+  },
+  del: function (id) { if (!window.fbDiary.canWrite()) return Promise.reject(new Error('只有網管可以刪文。')); return FBX.dbS.ref('diary/' + id).set(null); }
+};
 window.HATCH_FB = true;
 
 /* ===== Firebase 版要改寫的規則（接在 logic.js 與 fb.js 之後） ===== */
@@ -1517,8 +1556,27 @@ API.adminDeleteTeacher = function (S, p) {
   return { ok: true };
 };
 
+/* 共同導師：p.email + p.on（true 加入、false 移除）。只有主導師或網管可以設定 */
+function coKey_(email) { return String(email || '').trim().toLowerCase().replace(/\./g, ','); }
+API.classCo = function (S, p) {
+  var who = authStaff_(S, p), cls = myClass_(S, who, p.code);
+  if (p.email != null) {
+    if (who.role !== 'admin' && String(cls.owner || '') !== who.id) fail_('只有主導師（建立班級的老師）或網管可以設定共同導師。');
+    var em = String(p.email || '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) fail_('請輸入老師的 Gmail，例如 teacher@gmail.com。');
+    var key = coKey_(em);
+    if (key === String(cls.owner || '')) fail_('這位是主導師，不需要再加入。');
+    if (p.on !== false && (cls._co || []).length >= 5) fail_('一個班級最多 5 位共同導師。');
+    S.setCo(cls.code, key, p.on !== false);
+    cls = getClass_(S, cls.code);
+  }
+  var names = {}; S.listTeachers().forEach(function (t) { names[t.id] = t.name; });
+  return { code: cls.code, owner: cls.owner || '', ownerName: names[cls.owner] || '', mine: who.role === 'admin' || String(cls.owner || '') === who.id,
+    co: (cls._co || []).map(function (k) { return { key: k, email: k.replace(/,/g, '.'), name: names[k] || '' }; }) };
+};
 API.deleteClass = function (S, p) {
   var who = authStaff_(S, p), cls = myClass_(S, who, p.code);
+  if (who.role !== 'admin' && String(cls.owner || '') !== who.id) fail_('只有建立這個班級的導師（或網管）可以刪除班級。');
   S.delClass(cls.code);
   return { classes: classesFor_(S, who) };
 };
