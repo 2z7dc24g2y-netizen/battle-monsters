@@ -644,6 +644,8 @@ var API = {
     if (p.name != null && String(p.name).trim()) cls.name = String(p.name).trim();
     if (p.scope) cls.scope = p.scope;
     if (p.gear != null) cls.gear = p.gear ? '1' : '0';
+    /* 課堂監控：on 開始、pause 暫停、off 結束（學生頁面依這個決定要不要記錄離開） */
+    if (p.mon != null) cls.mon = p.mon === 'on' ? { on: true, at: Date.now() } : p.mon === 'pause' ? { on: false, paused: true, at: Date.now() } : null;
     if (p.count != null) {
       var n = Number(p.count);
       if (!(n >= 1 && n <= 60)) fail_('學生人數請輸入 1～60。');
@@ -821,7 +823,8 @@ API.liveBoard = function (S, p) {
     var l = L[st.seat], ans = st.todayDate === today ? st.todayAns || {} : {}, ks = Object.keys(ans), ok = ks.filter(function (k) { return ans[k] && ans[k].ok; }).length;
     var s = !l || now - l.t > LIVE_ON ? 'x' : (!l.v || now - l.a > LIVE_IDLE) ? 'y' : 'g';
     cnt[s]++;
-    out[st.seat] = { s: s, w: l ? l.w : '', idle: l ? Math.round((now - l.a) / 1000) : null, seen: l ? Math.round((now - l.t) / 1000) : null, hid: l ? !l.v : false, n: ks.length, ok: ok };
+    out[st.seat] = { s: s, w: l ? l.w : '', idle: l ? Math.round((now - l.a) / 1000) : null, seen: l ? Math.round((now - l.t) / 1000) : null, hid: l ? !l.v : false, n: ks.length, ok: ok,
+      out: l && l.out || 0, lo: l && l.lo || 0, bk: l && l.bk || 0, dur: l && l.dur || 0, ev: l && l.ev || 0, late: l && l.late || 0, md: l && l.md || '' };
   });
   return { live: out, count: cnt, at: now };
 };
@@ -1057,6 +1060,7 @@ var FBX = (function () {
   var cfg = window.FB_CONFIG;
   var appS = firebase.initializeApp(cfg, 'staff'), appT = firebase.initializeApp(cfg, 'stu'), appX = firebase.initializeApp(cfg, 'sec');
   var dbS = appS.database(), dbT = appT.database();
+  try { dbT.ref('.info/serverTimeOffset').on('value', function (s) { SKEW = Number(s.val()) || 0; }); } catch (e) {}
   var C = { teachers: {}, apps: {}, classes: {}, students: {}, pins: {}, gear: {}, isle: {}, live: {}, co: {}, coIdx: {} };
   var ME = null;                          // 目前的老師／網管 { role, id, name }
   var STU = null;                         // 目前的學生 { code, seat, pin }
@@ -1070,6 +1074,42 @@ var FBX = (function () {
     try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); } catch (e) { return d.toISOString().slice(0, 10); }
   }
   function clone(o) { return o === undefined ? undefined : JSON.parse(JSON.stringify(o)); }
+  /* ---------- 課堂監控（學生端）：老師開啟時，記錄這台裝置離開課堂頁面的時間 ----------
+   * 時間用 Firebase 伺服器時間校正；離開超過 10 秒算逾時。只記離開與返回，不記其他內容。 */
+  var SKEW = 0, MON_LIM = 10000;
+  function srvNow() { return Date.now() + SKEW; }
+  window.fbNow = srvNow;
+  function monKey(code, seat) { return 'sciHatch.mon.' + code + '-' + seat; }
+  function monOn(code) { var c = C.classes[String(code)]; return !!(c && c.mon && c.mon.on); }
+  function monStamp(code, seat, o) {
+    var k = monKey(code, seat), r; try { r = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { r = null; }
+    var d = today(); if (!r || r.d !== d) r = { d: d, ev: 0, late: 0, out: 0, lo: 0, bk: 0, dur: 0 };
+    var vis = o.v !== false, now = srvNow(), back = null;
+    if (monOn(code)) {
+      if (!vis && !r.out) { r.out = now; r.ev++; }
+      else if (vis && r.out) { r.lo = r.out; r.bk = now; r.dur = now - r.out; if (r.dur > MON_LIM) r.late++; r.out = 0; back = r; }
+    } else if (r.out) r.out = 0;
+    try { localStorage.setItem(k, JSON.stringify(r)); } catch (e) {}
+    o.out = r.out; o.lo = r.lo; o.bk = r.bk; o.dur = r.dur; o.ev = r.ev; o.late = r.late; o.md = d;
+    if (!vis && monOn(code)) { try { if (!/^請回到課堂/.test(document.title)) { MONT = document.title; document.title = '請回到課堂（10 秒內）'; } } catch (e) {} }
+    if (vis && MONT != null) { try { document.title = MONT; } catch (e) {} MONT = null; }
+    if (back) setTimeout(function () { monTell(back); }, 30);
+  }
+  var MONT = null;
+  function monTell(r) {
+    try {
+      var sec = Math.round(r.dur / 1000), late = r.dur > MON_LIM, el = document.getElementById('mon-tell');
+      if (!late && sec < 2) return;
+      if (el) el.remove(); el = document.createElement('div'); el.id = 'mon-tell';
+      el.style.cssText = 'position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,8,20,.72);padding:20px';
+      el.innerHTML = '<div style="background:#fff;color:#2b2039;border-radius:22px;padding:22px;max-width:420px;width:100%;text-align:center;font:600 17px/1.6 system-ui,\'Noto Sans TC\',sans-serif">' +
+        '<div style="font-size:22px;font-weight:900;margin-bottom:6px;color:' + (late ? '#c0392b' : '#2f74b3') + '">' + (late ? '離開超過 10 秒' : '歡迎回到課堂') + '</div>' +
+        '<div>剛剛離開了 ' + sec + ' 秒。' + (late ? '老師已經收到通知。' : '上課時請留在這個畫面，離開要在 10 秒內回來。') + '</div>' +
+        '<button type="button" style="margin-top:14px;min-height:48px;min-width:160px;border:0;border-radius:14px;background:#2f74b3;color:#fff;font:800 17px system-ui,sans-serif">我知道了</button></div>';
+      el.querySelector('button').onclick = function () { el.remove(); };
+      document.body.appendChild(el);
+    } catch (e) {}
+  }
   function ekey(email) { return String(email || '').trim().toLowerCase().replace(/\./g, ','); }
   function nice(e) {
     var c = e && e.code || '', m = String(e && e.message || e || '');
@@ -1127,7 +1167,7 @@ var FBX = (function () {
     tokGet: function (t) { return ME && t === 'fb' ? clone(ME) : null; },
     tokDel: function () {},
     lockCheck: function () { return 0; }, lockFail: function () {}, lockClear: function () {},
-    liveSet: function (code, seat, o) { PEND.push(dbT.ref('live/' + code + '/' + seat).set(o)); },
+    liveSet: function (code, seat, o) { monStamp(code, seat, o); PEND.push(dbT.ref('live/' + code + '/' + seat).set(o)); },
     liveGet: function (code, seats) { var m = C.live[code] || {}, out = {}; seats.forEach(function (s) { if (m[s]) out[s] = m[s]; }); return out; },
     listApps: function () { return Object.keys(C.apps || {}).map(function (k) { return clone(C.apps[k]); }); },
     saveApp: function (a) { C.apps[a.id] = clone(a); put('apps/' + a.id, a); },
@@ -1359,6 +1399,16 @@ var FBX = (function () {
         var timer = setInterval(calc, 4000);
         return function () { ref.child('presence').off(); ref.child('joined').off(); clearInterval(timer); };
       },
+      /* 連續攻擊制：收手機送來的答題與出手（resp/rt{座號}_{序號}），收到就刪掉，避免重複處理 */
+      rt: function (cb) {
+        var ref = base().child('resp');
+        ref.on('value', function (snap) {
+          var v = snap.val() || {}, list = [];
+          Object.keys(v).forEach(function (k) { var m = /^rt(\d+)_/.exec(k); if (!m) return; list.push({ seat: Number(m[1]), v: v[k] }); ref.child(k).set(null).catch(function () {}); });
+          if (list.length) cb(list);
+        }, function () {});
+        return function () { ref.off(); };
+      },
       /* 叫某位同學的手機做一件事，回傳 {noack}｜{timeout}｜{v:結果} */
       turn: function (d) {
         var b = base(), id = d.id;
@@ -1411,7 +1461,8 @@ var FBX = (function () {
       close: function (code) { return hostAt(dbS, 'rooms/' + code).close(); },
       state: function (code, o) { return hostAt(dbS, 'rooms/' + code).state(o); },
       watch: function (code, cb) { return hostAt(dbS, 'rooms/' + code).watch(cb); },
-      turn: function (code, d) { return hostAt(dbS, 'rooms/' + code).turn(d); }
+      turn: function (code, d) { return hostAt(dbS, 'rooms/' + code).turn(d); },
+      rt: function (code, cb) { return hostAt(dbS, 'rooms/' + code).rt(cb); }
     },
     S: {
       watch: function (h) { if (!STU) return function () {}; return playerAt(dbT, 'rooms/' + STU.code).watch(h); },

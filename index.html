@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin><script src="split.js?v=1"></script><script src="config.js"></script><script src="fbstub.js?v=3"></script><script>window.SCI_PAGE="hatch"</script><script src="sync.js"></script>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin><script src="split.js?v=1"></script><script src="config.js"></script><script src="fbstub.js?v=4"></script><script>window.SCI_PAGE="hatch"</script><script src="sync.js"></script>
 </head>
 <body>
 <script>/* HANABI.JS 日本花火特效模組（由 ChatGPT 初版改寫：效能、生命週期、上升動畫）。作者：辛巴王
@@ -470,7 +470,7 @@ canvas.anim{width:100%;height:auto;aspect-ratio:1;display:block}
 .mon .mistag{display:block;margin-top:4px;font-size:11.5px;font-weight:800;color:#b06a12}.mon .mistag.fin{color:#2f8a46}
 .livebar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;background:var(--card);border-radius:16px;padding:10px 14px;margin:0 0 12px;font-weight:700}
 .live{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700}.live i{width:11px;height:11px;border-radius:50%;flex:none}
-.live.lg i{background:#3fbf5a;box-shadow:0 0 0 3px rgba(63,191,90,.25)}.live.ly i{background:#f2b63c;box-shadow:0 0 0 3px rgba(242,182,60,.25)}.live.lx i{background:#b8b0a6}
+.live.lr i{background:#e0483a;box-shadow:0 0 0 3px rgba(224,72,58,.25)}.mon .live.lr{color:#c0392b;font-weight:900}.live.lg i{background:#3fbf5a;box-shadow:0 0 0 3px rgba(63,191,90,.25)}.live.ly i{background:#f2b63c;box-shadow:0 0 0 3px rgba(242,182,60,.25)}.live.lx i{background:#b8b0a6}
 .mon .live{display:flex;justify-content:center;margin-top:4px;color:var(--ink);white-space:nowrap}.mon .livea{display:block;font-size:11.5px;color:var(--muted);text-align:center}.mon.lv-x{opacity:.55}
 .burst{border-radius:50%;background:radial-gradient(circle,#fff 0,#ffe9a8 40%,rgba(255,233,168,0) 70%);animation:burst 1s ease-out both}
 @keyframes burst{from{transform:scale(.3);opacity:1}to{transform:scale(1.6);opacity:0}}
@@ -856,7 +856,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
         <button class="btn ghost" id="b-gear" title="同學對戰、白板對戰時，每位學生套用自己在科學島的服裝加成">服裝加成：開</button>
         <button class="btn orange" id="b-mis">本節任務</button>
         <button class="btn" id="b-duel" title="開放一段時間，讓學生用自己的手機私下組隊對戰（不會出現在白板上）">私人對戰</button>
-        <button class="btn" id="b-live" aria-pressed="false" title="每 20 秒更新一次：綠燈在操作、黃燈畫面開著但沒動或切走了、灰燈沒上線">課堂監控</button>
+        <button class="btn" id="b-live" aria-pressed="false" title="學生切走畫面 10 秒沒回來會通知你；綠燈在操作、黃燈沒動或切走、紅燈離開中、灰燈沒上線">課堂監控</button>
         <button class="btn ghost" id="b-refresh" aria-label="重新整理">重新整理</button>
       </div>
     </div>
@@ -903,7 +903,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 <div class="toast" id="toast" hidden></div>
 
 <div id="bf" hidden></div><div id="rc-ov" hidden></div><div id="rc-bar" hidden role="button" tabindex="0">戰鬥進行中・點這裡回到戰場</div>
-<script src="stand.js?v=20261128c"></script>
+<script src="stand.js?v=20261128d"></script>
 <script></script>
 <script></script>
 <script>
@@ -1527,33 +1527,87 @@ function misAnswer(q, k, btn, opts) {
     }
   }).catch(function (e) { toast(e.message); opts.forEach(function (o) { o.disabled = false; }); btn.classList.remove('pick'); });
 }
-/* ---------- 課堂監控 ---------- */
-var LIVE = { on: false, timer: 0, d: null };
+/* ---------- 課堂監控 ----------
+ * 老師開始監控後：學生頁面切走（換分頁、回主畫面、鎖螢幕）會立刻回報；超過 10 秒沒回來，白板跳出通知並記錄。
+ * 只是提醒與紀錄，由老師自己判斷怎麼處理；一般網頁看不出學生在別的分頁做什麼，也不能鎖住平板。 */
+var LIVE = { on: false, paused: false, timer: 0, d: null, log: [], open: {}, warned: {} };
 function fmtAgo(s) { return s == null ? '' : s < 60 ? s + ' 秒' : Math.round(s / 60) + ' 分鐘'; }
+function liveNow() { return window.fbNow ? window.fbNow() : Date.now(); }
+function liveToday() { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date()); } catch (e) { return new Date().toISOString().slice(0, 10); } }
+function liveLogKey() { return 'sciHatch.monlog.' + (S.board ? S.board.cls.code : '') + '.' + liveToday(); }
+function liveLoad() { try { LIVE.log = JSON.parse(localStorage.getItem(liveLogKey()) || '[]') || []; } catch (e) { LIVE.log = []; } }
+function liveSave() { try { localStorage.setItem(liveLogKey(), JSON.stringify(LIVE.log.slice(-300))); } catch (e) {} }
+function stuName(seat) { var m = S.board && S.board.students.filter(function (x) { return x.seat === Number(seat); })[0]; return seat + ' 號' + (m && m.name ? ' ' + m.name : ''); }
+function hhmmss(t) { return t ? new Date(t).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '–'; }
 function liveTag(seat) {
   if (!LIVE.on || !LIVE.d) return '';
   var l = LIVE.d.live[seat]; if (!l) return '';
+  var away = l.out && l.md === liveToday() ? Math.max(0, Math.round((liveNow() - l.out) / 1000)) : 0;
+  if (away) return '<span class="live ' + (away > 10 ? 'lr' : 'ly') + '"><i></i>離開中 ' + away + ' 秒' + (away > 10 ? '（逾時）' : '') + '</span>' + (l.ev ? '<span class="livea">今天離開 ' + l.ev + ' 次・逾時 ' + (l.late || 0) + ' 次</span>' : '');
   var txt = l.s === 'x' ? (l.seen == null ? '沒有上線' : fmtAgo(l.seen) + '前離線') : l.s === 'y' ? (l.hid ? '切到別的畫面' : '沒有動作 ' + fmtAgo(l.idle)) : (l.w || '上線中');
-  return '<span class="live l' + l.s + '"><i></i>' + esc(txt) + '</span>' + (l.n ? '<span class="livea">今天答 ' + l.n + ' 題・對 ' + Math.round(l.ok / l.n * 100) + '%</span>' : '');
+  return '<span class="live l' + l.s + '"><i></i>' + esc(txt) + '</span>' + (l.ev && l.md === liveToday() ? '<span class="livea">今天離開 ' + l.ev + ' 次・逾時 ' + (l.late || 0) + ' 次</span>' : l.n ? '<span class="livea">今天答 ' + l.n + ' 題・對 ' + Math.round(l.ok / l.n * 100) + '%</span>' : '');
+}
+/* 從學生的回報整理出離開紀錄：離開時間、返回時間、秒數、是否逾時 */
+function liveEvents(d) {
+  var today = liveToday(), ch = false;
+  Object.keys(d.live).forEach(function (seat) {
+    var l = d.live[seat]; if (!l || l.md !== today) return;
+    var o = LIVE.open[seat];
+    if (l.out && (!o || o.out !== l.out)) { o = LIVE.open[seat] = { seat: Number(seat), out: l.out, back: 0, dur: 0, late: false }; LIVE.log.push(o); ch = true; }
+    if (l.out && o) { var away = liveNow() - l.out; if (away > 10000 && !LIVE.warned[l.out]) { LIVE.warned[l.out] = 1; o.late = true; ch = true; liveAlarm(stuName(seat) + ' 離開超過 10 秒'); } }
+    if (!l.out && l.bk) {
+      var e = LIVE.log.filter(function (x) { return x.seat === Number(seat) && x.out === l.lo; })[0];
+      if (!e) { e = { seat: Number(seat), out: l.lo, back: l.bk, dur: l.dur, late: l.dur > 10000 }; LIVE.log.push(e); ch = true; if (e.late) liveAlarm(stuName(seat) + ' 剛剛離開了 ' + Math.round(l.dur / 1000) + ' 秒'); }
+      else if (!e.back) { e.back = l.bk; e.dur = l.dur; e.late = l.dur > 10000; ch = true; }
+      delete LIVE.open[seat];
+    }
+  });
+  if (ch) { LIVE.log.sort(function (a, b) { return a.out - b.out; }); liveSave(); }
+}
+function liveAlarm(msg) {
+  toast(msg);
+  try { var A = window.AudioContext || window.webkitAudioContext; if (!A) return; var c = LIVE.ac = LIVE.ac || new A(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.value = .08; o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + .25); } catch (e) {}
 }
 function liveTick() {
   if (!LIVE.on || !S.board || $('#v-board').hidden) return stopLive();
   call('liveBoard', { tok: S.tok, code: S.board.cls.code }).then(function (d) {
     LIVE.d = d; var c = d.count;
+    if (!LIVE.paused) liveEvents(d);
+    var away = Object.keys(d.live).filter(function (k) { var l = d.live[k]; return l.out && l.md === liveToday(); }).length, lateN = LIVE.log.filter(function (x) { return x.late; }).length;
     $('#b-livebar').hidden = false;
-    $('#b-livebar').innerHTML = '<span class="live lg"><i></i>在操作 <b>' + c.g + '</b></span><span class="live ly"><i></i>沒在動或切走 <b>' + c.y + '</b></span><span class="live lx"><i></i>沒上線 <b>' + c.x + '</b></span>' +
-      '<span class="small muted">每 20 秒更新・' + new Date(d.at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + '</span>';
+    $('#b-livebar').innerHTML = '<b>' + (LIVE.paused ? '課堂監控已暫停' : '課堂監控中') + '</b><span class="live lg"><i></i>在操作 <b>' + c.g + '</b></span><span class="live ly"><i></i>沒在動或切走 <b>' + c.y + '</b></span><span class="live lx"><i></i>沒上線 <b>' + c.x + '</b></span>' +
+      (away ? '<span class="live lr"><i></i>離開中 <b>' + away + '</b></span>' : '') +
+      '<button class="btn sm ghost" id="lv-log">離開紀錄（' + LIVE.log.length + '・逾時 ' + lateN + '）</button><button class="btn sm ghost" id="lv-pause">' + (LIVE.paused ? '繼續監控' : '暫停') + '</button><button class="btn sm red" id="lv-end">結束監控</button>';
+    $('#lv-log').onclick = liveLogOv; $('#lv-pause').onclick = function () { liveMode(LIVE.paused ? 'on' : 'pause'); }; $('#lv-end').onclick = function () { stopLive(); };
     S.board.students.forEach(function (m) { var b = document.querySelector('#b-grid .mon[data-seat="' + m.seat + '"]'); if (!b) return;
       b.querySelectorAll('.live,.livea').forEach(function (x) { x.remove(); }); b.insertAdjacentHTML('beforeend', liveTag(m.seat));
       b.classList.toggle('lv-x', d.live[m.seat] && d.live[m.seat].s === 'x'); });
   }).catch(function (e) { toast(e.message); });
 }
-function stopLive() { LIVE.on = false; clearInterval(LIVE.timer); var b = $('#b-live'); if (b) b.setAttribute('aria-pressed', 'false'); var bar = $('#b-livebar'); if (bar) bar.hidden = true;
-  document.querySelectorAll('#b-grid .live,#b-grid .livea').forEach(function (x) { x.remove(); }); document.querySelectorAll('#b-grid .lv-x').forEach(function (x) { x.classList.remove('lv-x'); }); }
+function liveLogOv() {
+  var cnt = {}; LIVE.log.forEach(function (x) { var c = cnt[x.seat] = cnt[x.seat] || { n: 0, late: 0 }; c.n++; if (x.late) c.late++; });
+  openOv('<div class="ov-head"><h2>今天的離開紀錄</h2><button class="x" aria-label="關閉">×</button></div>' +
+    '<p class="small muted" style="margin:0">學生頁面切走（換分頁、回主畫面、鎖螢幕）的時間，以伺服器時間計算。單一事件可能是誤觸或裝置省電，請老師自行判斷。</p>' +
+    (LIVE.log.length ? '<div class="tablebox"><table class="pins"><thead><tr><th>學生</th><th>離開</th><th>返回</th><th>秒數</th><th>逾時</th><th>今天次數</th></tr></thead><tbody>' +
+      LIVE.log.slice().reverse().map(function (x) { return '<tr><td>' + esc(stuName(x.seat)) + '</td><td class="num">' + hhmmss(x.out) + '</td><td class="num">' + (x.back ? hhmmss(x.back) : '還沒回來') + '</td><td class="num">' + (x.back ? Math.round(x.dur / 1000) : Math.round((liveNow() - x.out) / 1000)) + '</td><td' + (x.late ? ' style="color:var(--bad);font-weight:800">是' : '>否') + '</td><td class="num">' + cnt[x.seat].n + '（逾時 ' + cnt[x.seat].late + '）</td></tr>'; }).join('') + '</tbody></table></div>'
+      : '<p class="muted">今天還沒有紀錄。</p>') +
+    '<div class="row"><button class="btn ghost sm" id="lv-clear">清除今天的紀錄</button></div>', 'wide');
+  $('#lv-clear').onclick = function () { if (!window.confirm('清除今天這個班的離開紀錄？')) return; LIVE.log = []; LIVE.open = {}; liveSave(); closeOv(); toast('已清除'); };
+}
+function liveMode(m) {
+  call('updateClass', { tok: S.tok, code: S.board.cls.code, mon: m }).then(function (d) { S.board = d; LIVE.paused = m === 'pause'; liveTick(); toast(m === 'pause' ? '已暫停監控：學生離開不會被記錄' : m === 'on' ? '監控中：學生離開 10 秒會通知你' : '已結束課堂監控'); })
+    .catch(function (e) { toast(e.message); });
+}
+function stopLive(silent) {
+  if (LIVE.on && !silent && S.board) call('updateClass', { tok: S.tok, code: S.board.cls.code, mon: 'off' }).catch(function () {});
+  LIVE.on = false; clearInterval(LIVE.timer); var b = $('#b-live'); if (b) b.setAttribute('aria-pressed', 'false'); var bar = $('#b-livebar'); if (bar) bar.hidden = true;
+  document.querySelectorAll('#b-grid .live,#b-grid .livea').forEach(function (x) { x.remove(); }); document.querySelectorAll('#b-grid .lv-x').forEach(function (x) { x.classList.remove('lv-x'); });
+}
 $('#b-live').onclick = function () {
   if (LIVE.on) { stopLive(); return; }
-  LIVE.on = true; this.setAttribute('aria-pressed', 'true'); liveTick(); LIVE.timer = setInterval(liveTick, 20000);
-  toast('課堂監控開啟：學生頁面每分鐘回報一次，開始後 1 分鐘內就會亮燈');
+  LIVE.on = true; LIVE.paused = false; LIVE.open = {}; liveLoad(); this.setAttribute('aria-pressed', 'true');
+  liveMode('on'); clearInterval(LIVE.timer); LIVE.timer = setInterval(liveTick, 3000);
+  toast('課堂監控開始：學生切走 10 秒沒回來會通知你（學生頁面要開著才能回報）');
 };
 /* 學生端：每分鐘回報一次在哪裡、有沒有在操作 */
 var BEAT = { last: Date.now(), timer: 0 };
@@ -2076,7 +2130,7 @@ function revealEgg(m) {
 $('#b-battle').onclick = function () {
   var btn = this, code = S.board.cls.code, FBR = window.fbRoom; busy(btn, true, '讀取中');
   call('teacherRoster', { tok: S.tok, code: code }).then(function (r) {
-    var events = [], lastJ = { seats: [], pressed: [], sides: {} }, stopW = null;
+    var events = [], lastJ = { seats: [], pressed: [], sides: {} }, stopW = null, rtOff = null;
     var go = function () {
       openBattle({ mode: 'teacher', roster: r.roster, questions: r.questions, canAward: true, xpWin: r.xpWin, xpLose: r.xpLose, remote: !!FBR, joined: [], pressed: [] }, {
         'cb-ready': function () { reply({ t: 'cb-joined', seats: lastJ.seats, pressed: lastJ.pressed, sides: lastJ.sides }); },
@@ -2087,7 +2141,8 @@ $('#b-battle').onclick = function () {
             S.board = b; events = events.concat(b.events.filter(function (e) { return e.evolved; }));
           }).catch(function (e) { toast(e.message); });
         },
-        close: function () { if (stopW) stopW(); if (FBR) FBR.T.close(code).catch(function () {}); renderBoard(); if (events.length) playEvents(events); }
+        'cb-rt-on': function () { if (FBR && !rtOff) rtOff = FBR.T.rt(code, function (list) { reply({ t: 'cb-rt-in', list: list }); }); },
+        close: function () { if (rtOff) rtOff(); if (stopW) stopW(); if (FBR) FBR.T.close(code).catch(function () {}); renderBoard(); if (events.length) playEvents(events); }
       });
       if (FBR) stopW = FBR.T.watch(code, function (d) { lastJ = { seats: d.online, pressed: d.pressed, sides: d.sides }; reply({ t: 'cb-joined', seats: d.online, pressed: d.pressed, sides: d.sides }); });
     };
@@ -2111,7 +2166,7 @@ function rcLabel() {
         (!can ? '<p class="small muted" style="margin:0">蛋孵化之後才能上場。</p>'
           : sd ? '<p class="small" style="margin:0">你已加入<b>' + (sd === 'A' ? '藍隊' : '紅隊') + '</b>' + (inF ? '，已經站上戰場。' : '，等老師開始。') + '</p><div class="row"><button class="btn" id="wb-view">打開戰場畫面</button>' + (RCs.state && RCs.state.phase === 'battle' ? '' : '<button class="btn ghost" id="wb-sw">換到' + other + '</button>') + '<button class="btn ghost" id="wb-out">退出</button></div>'
           : inF ? '<p class="small" style="margin:0">老師把你排上戰場了。</p><div class="row"><button class="btn" id="wb-view">打開戰場畫面</button></div>'
-          : '<p class="small muted" style="margin:0">選一隊加入。老師開始後輪到你，手機會跳出答題和攻防畫面。</p><div class="row"><button class="btn" data-wbj="A">加入藍隊</button><button class="btn red2" data-wbj="B">加入紅隊</button></div>');
+          : '<p class="small muted" style="margin:0">選一隊加入。老師開始後，手機會一直出題：答對就攻擊、連對 5 題放大招。</p><div class="row"><button class="btn" data-wbj="A">加入藍隊</button><button class="btn red2" data-wbj="B">加入紅隊</button></div>');
       box.querySelectorAll('[data-wbj]').forEach(function (b) { b.onclick = function () { wbJoin(b.dataset.wbj); }; });
       var v = $('#wb-view'); if (v) v.onclick = function () { RCs.min = false; bfRender(); };
       var w = $('#wb-sw'); if (w) w.onclick = function () { wbJoin(sd === 'A' ? 'B' : 'A'); };
@@ -2199,6 +2254,35 @@ function rcTurn(t) {
     clearInterval(RCs.timer); RCs.timer = setTimeout(function () { if (!stopped) { stopped = true; cancelAnimationFrame(raf); rcClose(); } }, 12000);
   }
 }
+/* ---------- 連續攻擊制（手機）：自己的題目 → 答對選目標 → 答錯鎖 2 秒；連對 5 題可以放大招 ---------- */
+var RT = { key: '', lockT: 0 };
+function rtPhone(src) {
+  var st = src && src.st, r = st && st.phase === 'battle' && st.rt ? st.rt[S.auth.seat] : null;
+  if (!r) { if (RT.key) { RT.key = ''; clearInterval(RT.lockT); var o = $('#rc-ov'); if (o && !RCs.cur) o.hidden = true; } return; }
+  var key = r.n + '|' + r.st; if (key === RT.key) return; RT.key = key; clearInterval(RT.lockT);
+  var ch = src.k === 'duel' ? DU.me.P : window.fbRoom.S, me = S.auth.seat;
+  var send = function (v, msg) { v.n = r.n; ch.resp('rt' + me + '_' + r.n + '_' + Date.now().toString(36), v).catch(function () { toast('連線不穩，請再按一次'); RT.key = ''; }); rcShow('<h2>' + esc(msg) + '</h2>'); };
+  var head = '<div class="rc-head"><b>連續攻擊</b><span class="pill">' + (r.ult ? '大招就緒' : '連對 ' + r.sk + '/5') + '</span></div>';
+  var tgBtn = function (x, cls, u) { return '<button class="btn big rc-b' + cls + '" data-u="' + esc(x.uid) + '"' + (u ? ' data-ult="1"' : '') + '><span class="elpill" style="background:' + (EL[x.el] ? EL[x.el].color : '#888') + '">' + (EL[x.el] ? EL[x.el].name : '') + '</span> ' + esc(x.label) + '・血量 ' + x.hp + '%</button>'; };
+  if (r.st === 'q' && r.q) {
+    var q = r.q;
+    rcShow(head + '<div class="stem">' + esc(q.stem) + '</div>' + (q.image ? '<div class="fig"><img src="' + q.image + '" alt="題目附圖"></div>' : '') +
+      ['A', 'B', 'C', 'D'].map(function (k) { return '<button class="opt" data-k="' + k + '"><span class="k">' + k + '</span><span>' + esc(q[k]) + '</span></button>'; }).join(''));
+    $('#rc-ov').querySelectorAll('.opt').forEach(function (o) { o.onclick = function () { send({ k: o.dataset.k }, '已送出 ' + o.dataset.k); }; });
+  } else if (r.st === 'tg') {
+    rcShow(head + '<p style="margin:0;color:#8ef59a;font-weight:800">答對了！' + esc(r.me || '') + ' 要打誰？</p>' + (r.tg || []).map(function (x) { return tgBtn(x, '', 0); }).join('') +
+      (r.ult ? '<div class="stack" style="gap:6px;margin-top:6px"><b style="color:var(--accent,#f2c14e)">大招：' + esc(r.un) + '</b><span class="small">' + esc(r.ud || '') + '</span>' + ((r.utg || []).length ? r.utg.map(function (x) { return tgBtn(x, ' orange', 1); }).join('') : '<button class="btn big orange rc-b" data-u="" data-ult="1">發動大招</button>') + '</div>' : ''));
+    $('#rc-ov').querySelectorAll('[data-u]').forEach(function (b) { b.onclick = function () { send({ t: b.dataset.u, u: !!b.dataset.ult }, b.dataset.ult ? '大招發動！' : '出手！'); }; });
+  } else if (r.st === 'lock') {
+    var left = 2;
+    rcShow(head + '<h2 style="color:#ff8a7a">答錯了</h2><p>答案是（' + esc(r.fb && r.fb.ans || '') + '）。<b id="rt-l">2</b> 秒後再答下一題。</p>');
+    RT.lockT = setInterval(function () { left--; var e = $('#rt-l'); if (e) e.textContent = Math.max(0, left); if (left <= 0) clearInterval(RT.lockT); }, 1000);
+  } else if (r.st === 'dead') {
+    rcShow(head + '<h2>你的理化獸倒下了</h2><p class="muted">幫隊友加油！</p><button class="btn ghost" id="rt-hide">看戰場</button>');
+    $('#rt-hide').onclick = function () { $('#rc-ov').hidden = true; };
+  } else rcShow(head + '<h2>攻擊中…</h2><p class="muted">馬上就有下一題</p>');
+  if (navigator.vibrate && r.st === 'tg') try { navigator.vibrate(60); } catch (e) {}
+}
 /* ---------- 戰場畫面（手機）：讓同學知道自己已經在戰場上 ---------- */
 function bfSrc() {
   if (DU.me && DU.me.role === 'guest') return { k: 'duel', st: DU.me.state, side: DU.me.side, all: DU.me.all || {}, title: DU.me.kind === 'pk' ? 'PK 對戰' : '私人組隊對戰' };
@@ -2242,6 +2326,7 @@ function bfStage(units, act, me, phase) {
 function bfRender() {
   var o = $('#bf'), bar = $('#rc-bar'); if (!o || !bar) return;
   var src = S.auth ? bfSrc() : null, min = src && (src.k === 'duel' ? DU.min : RCs.min), busyBt = !!document.querySelector('.btframe');
+  rtPhone(src);
   o.hidden = !src || min || busyBt;
   if (!src && o.dataset.sk) { delete o.dataset.sk; o.innerHTML = ''; BFS.el = null; BFS.u = {}; }
   bar.hidden = !(src && min) || !!RCs.cur || busyBt;
@@ -2260,7 +2345,8 @@ function bfRender() {
     stCls = side && w === side ? 'win' : 'lose';
   } else if (phase === 'battle') {
     var a = units.filter(function (u) { return u.u === st.act; })[0];
-    if (a && a.seat === me) { stTxt = '輪到你了！看手機跳出來的題目和按鈕'; stCls = 'go'; }
+    if (st.rt) { stTxt = '連續攻擊中：答對就出手，答錯鎖 2 秒'; stCls = 'go'; }
+    else if (a && a.seat === me) { stTxt = '輪到你了！看手機跳出來的題目和按鈕'; stCls = 'go'; }
     else stTxt = '第 ' + (st.round || 1) + ' 輪' + (a ? '・輪到' + (a.s === 'A' ? '藍隊' : '紅隊') + ' ' + a.seat + ' 號 ' + esc(a.m) : '');
   } else {
     stTxt = src.k === 'wb' ? (mine.length ? '你已站上戰場，等老師按開始' : '你已加入' + sideTxt + '，等老師把你排上場')
@@ -2284,7 +2370,7 @@ function bfRender() {
     '<div class="bf-st ' + stCls + '">' + stTxt + '</div>';
   bfStage(units, st && st.act, me, phase);
   $('#bf-rest').innerHTML = '<div class="bf-teams">' + teams + '</div>' +
-    (phase === 'end' ? '' : '<div class="bf-foot">輪到你的理化獸時，會跳出答題、選招和攻防按鈕。<br>手機請保持開著，不要鎖螢幕。</div>') + (acts ? '<div class="bf-act">' + acts + '</div>' : '');
+    (phase === 'end' ? '' : '<div class="bf-foot">開戰後手機會一直出題：答對就選目標攻擊，答錯鎖 2 秒，連對 5 題放大招。<br>手機請保持開著，不要鎖螢幕。</div>') + (acts ? '<div class="bf-act">' + acts + '</div>' : '');
   $('#bf-min').onclick = function () { if (src.k === 'duel') DU.min = true; else RCs.min = true; bfRender(); };
   var sw = $('#bf-sw'); if (sw) sw.onclick = function () { if (src.k === 'wb') wbJoin(RCs.side === 'A' ? 'B' : 'A'); else duSwitch(); };
   var out = $('#bf-out'); if (out) out.onclick = function () {
@@ -2472,7 +2558,8 @@ function hostStart() {
           reply({ t: 'cb-reward', html: '<span>' + esc(rewardTxt(x)) + '</span>' });
         }).catch(function (e) { reply({ t: 'cb-reward', html: '<span>' + esc(e.message) + '</span>' }); });
       },
-      close: function () { if (m.stop) m.stop(); F.D.shut(m.id, m.to); if (DU.me === m) DU.me = null; renderLab(); revealAfter(res); }
+      'cb-rt-on': function () { if (!m.rtOff) m.rtOff = ch.rt(function (list) { reply({ t: 'cb-rt-in', list: list }); }); },
+      close: function () { if (m.rtOff) m.rtOff(); if (m.stop) m.stop(); F.D.shut(m.id, m.to); if (DU.me === m) DU.me = null; renderLab(); revealAfter(res); }
     });
   }).catch(function (e) { toast(e.message); m.started = false; hostCancel(); });
 }
