@@ -853,6 +853,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
         <button class="btn ghost" id="b-pins">名單與 PIN</button>
         <button class="btn ghost" id="b-co" title="讓其他老師也能管理這個班級">導師</button>
         <button class="btn ghost" id="b-scope">出題範圍</button>
+        <button class="btn ghost" id="b-subj" title="對戰時除了自然科學島，還可以加入哪些科目的題目">對戰題目：自然科</button>
         <button class="btn ghost" id="b-gear" title="同學對戰、白板對戰時，每位學生套用自己在科學島的服裝加成">服裝加成：開</button>
         <button class="btn orange" id="b-mis">本節任務</button>
         <button class="btn" id="b-duel" title="開放一段時間，讓學生用自己的手機私下組隊對戰（不會出現在白板上）">私人對戰</button>
@@ -903,7 +904,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 <div class="toast" id="toast" hidden></div>
 
 <div id="bf" hidden></div><div id="rc-ov" hidden></div><div id="rc-bar" hidden role="button" tabindex="0">戰鬥進行中・點這裡回到戰場</div>
-<script src="stand.js?v=20261128f"></script>
+<script src="stand.js?v=20261128g"></script>
 <script></script>
 <script></script>
 <script>
@@ -1341,7 +1342,7 @@ function refreshBoard(btn) {
 function renderBoard() {
   var d = S.board, n = d.students.length;
   var hl = d.students.filter(function (s) { return s.hatched; }), avg = hl.length ? hl.reduce(function (a, s) { return a + s.level; }, 0) / hl.length : 0;
-  $('#b-title').textContent = d.cls.name; renderGearBtn();
+  $('#b-title').textContent = d.cls.name; renderGearBtn(); renderSubjBtn();
   $('#b-stats').innerHTML = '<span class="stat">代碼<b>' + esc(d.cls.code) + '</b></span><span class="stat">已孵化<b>' + d.hatched + '</b>／' + n + '</span>' +
     '<span class="stat">今日完成訓練<b>' + d.doneToday + '</b>人</span><span class="stat">夥伴平均<b>Lv' + (hl.length ? avg.toFixed(1) : '–') + '</b></span>';
   $('#b-select').textContent = S.select ? '結束選取' : '選取多位加分';
@@ -1912,7 +1913,7 @@ function scopeEditor(scope, onSave, title) {
 $('#b-gear').onclick = function () {
   var b = this, on = !(S.board && S.board.cls.gear);
   busy(b, true, '儲存中');
-  call('updateClass', { tok: S.tok, code: S.board.cls.code, gear: on }).then(function (d) { S.board = d; busy(b, false); renderGearBtn(); toast(on ? '班級對戰會套用每位學生的服裝加成' : '班級對戰不套用服裝加成，只比等級和答題'); })
+  call('updateClass', { tok: S.tok, code: S.board.cls.code, gear: on }).then(function (d) { S.board = d; busy(b, false); renderGearBtn(); renderSubjBtn(); toast(on ? '班級對戰會套用每位學生的服裝加成' : '班級對戰不套用服裝加成，只比等級和答題'); })
     .catch(function (e) { busy(b, false); toast(e.message); });
 };
 function renderGearBtn() { var b = $('#b-gear'); if (!b || !S.board) return; var on = S.board.cls.gear !== false; b.textContent = '服裝加成：' + (on ? '開' : '關'); b.setAttribute('aria-pressed', on); }
@@ -1921,6 +1922,22 @@ $('#b-scope').onclick = function () {
     busy(b, true, '儲存中');
     call('updateClass', { tok: S.tok, code: S.board.cls.code, scope: scope }).then(function (d) { S.board = d; closeOv(); toast('出題範圍已更新，明天的訓練開始套用'); }).catch(function (e) { toast(e.message); busy(b, false); });
   }, '每日訓練出題範圍');
+};
+/* 對戰題目科目（老師勾選；自然科學島一定出題） */
+function subjLabel_(cls) { return '自然科' + ((cls && cls.qsubj) || []).map(function (k) { return '＋' + (SUBJ[k] ? SUBJ[k].name : k); }).join(''); }
+function renderSubjBtn() { var b = $('#b-subj'); if (b && S.board) b.textContent = '對戰題目：' + subjLabel_(S.board.cls); }
+$('#b-subj').onclick = function () {
+  var sel = {}; ((S.board.cls.qsubj) || []).forEach(function (k) { sel[k] = 1; });
+  openOv('<div class="ov-head"><h2>對戰題目科目</h2><button class="x" aria-label="關閉">×</button></div>' +
+    '<p class="small muted" style="margin:0">自然科學島一定會出題。勾選的科目會加入白板對戰、私人對戰和同學對戰的題庫。</p>' +
+    '<div class="row" id="sj"><span class="chip" aria-pressed="true" style="pointer-events:none">自然科學島（固定）</span>' +
+    Object.keys(SUBJ).map(function (k) { return '<button type="button" class="chip" data-s="' + k + '" aria-pressed="' + !!sel[k] + '">' + esc(SUBJ[k].name) + '</button>'; }).join('') +
+    '</div><div class="row"><button class="btn green" id="sj-save">儲存</button></div>', 'wide');
+  $('#sj').querySelectorAll('.chip[data-s]').forEach(function (c) { c.onclick = function () { var k = c.dataset.s; if (sel[k]) delete sel[k]; else sel[k] = 1; c.setAttribute('aria-pressed', !!sel[k]); }; });
+  $('#sj-save').onclick = function () {
+    var b = this; busy(b, true, '儲存中');
+    call('updateClass', { tok: S.tok, code: S.board.cls.code, qsubj: Object.keys(sel) }).then(function (d) { S.board = d; closeOv(); renderSubjBtn(); toast('對戰題目已更新'); }).catch(function (e) { toast(e.message); busy(b, false); });
+  };
 };
 
 /* 課堂題（白板全螢幕） */
@@ -2076,8 +2093,25 @@ function arenaRows() {
 
 /* ---------- 對戰畫面（iframe，競技島的對戰系統） ---------- */
 var BT = null;
+/* 對戰題目科目：自然科學島（內建）＋老師勾選的科目。題目檔按需載入 */
+var SUBJ = { M7A: { name: '數學（七上）', file: 'q-math-7a.js', v: 'QMATH7A', isl: { 'M1-1': '1-1 數與數線', 'M1-2': '1-2 整數的加減運算', 'M1-3': '1-3 整數的乘除運算', 'M1-4': '1-4 指數記法與科學記號', 'M2-1': '2-1 質因數分解', 'M2-2': '2-2 公因數與公倍數', 'M2-3': '2-3 分數的四則運算', 'M2-4': '2-4 分數的四則運算（延伸）', 'M3-1': '3-1 以符號列式與運算', 'M3-2': '3-2 一元一次方程式的列式與求解', 'M3-3': '3-3 一元一次方程式的應用' } } };
+function subjExtras_(keys) {
+  var list = (Array.isArray(keys) ? keys : []).filter(function (k) { return SUBJ[k]; }), out = { qs: [], isl: {} };
+  return Promise.all(list.map(function (k) {
+    var s = SUBJ[k];
+    return new Promise(function (res, rej) {
+      if (window[s.v]) return res(window[s.v]);
+      var el = document.createElement('script'); el.src = s.file + '?v=1';
+      el.onload = function () { res(window[s.v] || []); }; el.onerror = function () { rej(new Error(s.file)); };
+      document.head.appendChild(el);
+    }).then(function (qs) { out.qs = out.qs.concat(qs); Object.assign(out.isl, s.isl); }, function () {});
+  })).then(function () { return out; });
+}
 function openBattle(cfg, handlers) {
   closeBattle();
+  subjExtras_(cfg.qsubj).then(function (ex) { cfg.extraQuestions = ex.qs; cfg.extraIslands = ex.isl; buildBT_(cfg, handlers); });
+}
+function buildBT_(cfg, handlers) {
   if (!IS_GAS) { try { cfg.monBase = new URL('mon/', location.href).href; cfg.monV = 1; } catch (e) {} }
   var json = function (o) { return JSON.stringify(o).replace(/<\//g, '<\\/').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'); };
   var f = document.createElement('iframe');
@@ -2133,7 +2167,7 @@ $('#b-battle').onclick = function () {
   call('teacherRoster', { tok: S.tok, code: code }).then(function (r) {
     var events = [], lastJ = { seats: [], pressed: [], sides: {} }, stopW = null, rtOff = null;
     var go = function () {
-      openBattle({ mode: 'teacher', roster: r.roster, questions: r.questions, canAward: true, xpWin: r.xpWin, xpLose: r.xpLose, remote: !!FBR, joined: [], pressed: [] }, {
+      openBattle({ mode: 'teacher', roster: r.roster, questions: r.questions, qsubj: r.qsubj, canAward: true, xpWin: r.xpWin, xpLose: r.xpLose, remote: !!FBR, joined: [], pressed: [] }, {
         'cb-ready': function () { reply({ t: 'cb-joined', seats: lastJ.seats, pressed: lastJ.pressed, sides: lastJ.sides }); },
         'cb-remote': function (d) { FBR.T.turn(code, d).then(function (v) { reply({ t: 'cb-remote-res', id: d.id, v: v }); }); },
         'cb-state': function (d) { FBR.T.state(code, d).catch(function () {}); },
@@ -2547,7 +2581,7 @@ function hostStart() {
   call('duelCfg', Object.assign({ A: A, B: B, full: m.kind === 'pk' }, S.auth)).then(function (r) {
     if (DU.me !== m) return;
     var pk = m.kind === 'pk', ch = F.D.host(m.id), res = null;
-    openBattle({ mode: 'duel', me: S.auth.seat, teamA: r.cfg.teamA, teamB: r.cfg.teamB, remote: true, joined: guests,
+    openBattle({ mode: 'duel', me: S.auth.seat, teamA: r.cfg.teamA, teamB: r.cfg.teamB, remote: true, qsubj: r.cfg.qsubj, joined: guests,
       title: pk ? 'PK 對戰' : '私人組隊對戰', nameA: pk ? nm(S.auth.seat) : '藍隊', nameB: pk ? nm(B[0]) : '紅隊',
       note: pk ? '對方用自己的手機操作。打完各用掉一次今天的挑戰，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' : '同學用自己的手機操作。私人對戰不算每天 3 次挑戰，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' }, {
       'cb-remote': function (d) { ch.turn(d).then(function (v) { reply({ t: 'cb-remote-res', id: d.id, v: v }); }); },
