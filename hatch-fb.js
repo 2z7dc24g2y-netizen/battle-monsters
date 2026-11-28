@@ -1243,7 +1243,7 @@ var FBX = (function () {
     if (!Array.isArray(o.scope)) o.scope = o.scope ? Object.keys(o.scope).map(function (i) { return o.scope[i]; }) : [];
     return o;
   }
-  /* 完整題庫（歷屆會考題 535 題）放在 bank.json，第一次需要時才下載，之後瀏覽器會留著 */
+  /* 完整題庫（歷屆會考題 520 題）放在 bank.json，第一次需要時才下載，之後瀏覽器會留著 */
   var BANK = null, BANKP = null;
   function QSRC() { return BANK || []; }
   function loadBank() {

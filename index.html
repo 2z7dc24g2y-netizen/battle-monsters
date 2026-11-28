@@ -904,7 +904,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 <div class="toast" id="toast" hidden></div>
 
 <div id="bf" hidden></div><div id="rc-ov" hidden></div><div id="rc-bar" hidden role="button" tabindex="0">戰鬥進行中・點這裡回到戰場</div>
-<script src="stand.js?v=20261128j"></script>
+<script src="stand-img.js?v=1"></script><script src="stand.js?v=20261128k"></script>
 <script></script>
 <script></script>
 <script>
@@ -990,19 +990,6 @@ function eggSvg(color, pct, cls) {
 }
 function spriteOf(m) { return STAND[m.element + (m.stage || 1)]; }
 /* 有逐格動畫的怪獸（目前：火系第三階段 炎鷹獸） */
-function isAnimated(m) { return false; }
-function animCanvas(id) { return '<canvas class="anim" id="' + id + '" width="480" height="480" role="img" aria-label="炎鷹獸"></canvas>'; }
-function showcase(p) {
-  if (!p) return p;
-  var acts = ['idle', 'fly', 'attack', 'idle', 'skill', 'victory'], i = 0;
-  var go = function () { if (!p.c.isConnected) return; var a = acts[i++ % acts.length]; p.play(a, { loop: false, onEnd: go }); };
-  go(); return p;
-}
-function mountAnim(id, opt) {
-  var c = document.getElementById(id); if (!c) return null;
-  var o = { scale: 1.25, baseline: 0.9 }; for (var k in (opt || {})) o[k] = opt[k];
-  var p = new AnimPlayer(c, FIRE_ANIM, o); p.play('idle'); return p;
-}
 function artOf(m, big) {
   if (m.hatched) return '<img src="' + spriteOf(m) + '" alt="' + esc(m.monName) + '" class="st' + m.stage + ' el-' + m.element + '">';
   return eggSvg(m.eggColor, m.hatch);
@@ -1362,7 +1349,6 @@ function renderBoard() {
       else studentDetail(seat);
     };
   });
-  d.students.forEach(function (m) { if (isAnimated(m)) mountAnim('bd-' + m.seat, { scale: 1.45, baseline: 0.95 }); });
   renderSelbar(); renderMisBar(); renderDuelBar();
 }
 $('#b-refresh').onclick = function () { refreshBoard(this); };
@@ -1720,11 +1706,7 @@ function revealEvolve(m, who) {
     var prev = STAND[m.element + Math.max(1, m.stage - 1)];
     openOv('<div class="reveal"><h2>' + esc(who ? who + '的怪獸' : '你的怪獸') + '進化了！</h2><div class="stage" id="rv"><img class="shake" src="' + prev + '" alt=""></div><p class="muted" id="rv-t">發出耀眼的光芒…</p></div>', 'lock');
     setTimeout(function () {
-      if (isAnimated(m)) {
-        $('#rv').innerHTML = '<div class="burst"></div>' + animCanvas('rv-anim');
-        var rp = mountAnim('rv-anim', { scale: 1.1 });
-        if (rp) rp.sequence([{ name: 'fly', times: 2 }, { name: 'victory' }]);
-      } else $('#rv').innerHTML = '<div class="burst"></div><img class="pop" src="' + spriteOf(m) + '" alt="' + esc(m.monName) + '">';
+      $('#rv').innerHTML = '<div class="burst"></div><img class="pop" src="' + spriteOf(m) + '" alt="' + esc(m.monName) + '">';
       hanabiAt('evolve');
       $('#rv-t').outerHTML = '<div class="stack" style="align-items:center;gap:8px"><b style="font-size:26px;font-family:var(--f-display)">' + EL[m.element].stages[m.stage - 2] + ' → ' + esc(m.monName) + '</b><span class="pill num">Lv' + m.level + '</span><button class="btn orange big" id="rv-ok">繼續變強！</button></div>';
       rvBind(res);
@@ -2102,13 +2084,15 @@ var SUBJ = { M7A: { name: '數學（七上）', file: 'q-math-7a.js', v: 'QMATH7
       M5: { name: '四則運算（小學五、六年級）', file: 'q-elem-ops.js', v: 'QELEM', isl: { P1: '第一級 整數加減乘除', P2: '第二級 先乘除後加減與括號', P3: '第三級 小數四則', P4: '第四級 分數四則' } },
       M8A: { name: '數學（八上）', file: 'q-math-8a.js', v: 'QMATH8A', isl: { 'E1-1': '1-1 乘法公式', 'E1-2': '1-2 多項式的加減', 'E1-3': '1-3 多項式的乘除', 'E2-1': '2-1 平方根與近似值', 'E2-2': '2-2 根式的運算', 'E2-3': '2-3 畢氏定理', 'E3-1': '3-1 提公因式與乘法公式作因式分解', 'E3-2': '3-2 利用十字交乘法因式分解', 'E4-1': '4-1 因式分解法解一元二次方程式', 'E4-2': '4-2 配方法與公式解', 'E4-3': '4-3 應用問題', 'E5-1': '5-1 相對與累積次數分配圖表' } },
       M8B: { name: '數學（八下）', file: 'q-math-8b.js', v: 'QMATH8B', isl: { 'H1-1': '1-1 等差數列', 'H1-2': '1-2 等差級數', 'H1-3': '1-3 等比數列', 'H2-1': '2-1 函數與函數圖形', 'H3-1': '3-1 三角形與多邊形的內角與外角', 'H3-2': '3-2 尺規作圖', 'H3-3': '3-3 三角形的全等性質', 'H3-4': '3-4 垂直平分線與角平分線的性質', 'H3-5': '3-5 三角形的邊角關係', 'H4-1': '4-1 平行', 'H4-2': '4-2 平行四邊形', 'H4-3': '4-3 特殊四邊形' } } };
+/* 題庫檔更新時改這個版本號，學生的瀏覽器才會下載新版 */
+var QBANK_V = '20261128b';
 function subjExtras_(keys) {
   var list = (Array.isArray(keys) ? keys : []).filter(function (k) { return SUBJ[k]; }), out = { qs: [], isl: {} };
   return Promise.all(list.map(function (k) {
     var s = SUBJ[k];
     return new Promise(function (res, rej) {
       if (window[s.v]) return res(window[s.v]);
-      var el = document.createElement('script'); el.src = s.file + '?v=1';
+      var el = document.createElement('script'); el.src = s.file + '?v=' + QBANK_V;
       el.onload = function () { res(window[s.v] || []); }; el.onerror = function () { rej(new Error(s.file)); };
       document.head.appendChild(el);
     }).then(function (qs) { out.qs = out.qs.concat(qs); Object.assign(out.isl, s.isl); }, function () {});

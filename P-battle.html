@@ -309,7 +309,7 @@ input[type=checkbox]{accent-color:var(--gold);width:18px;height:18px}
 .gain.drop.q3{border:2px solid #b07dff;box-shadow:0 0 22px rgba(160,90,255,.6);background:linear-gradient(135deg,rgba(199,125,255,.2),rgba(106,61,240,.1))}
 </style>
 
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin><script src="split.js?v=1"></script><script src="config.js"></script><script src="fbstub.js?v=5"></script><script>window.SCI_PAGE="isle"</script><script src="sync.js"></script>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin><script src="config.js"></script><script src="fbstub.js?v=5"></script><script>window.SCI_PAGE="isle"</script><script src="sync.js"></script>
 </head><body>
 <div class="game">
   <div class="hud">
@@ -329,7 +329,7 @@ input[type=checkbox]{accent-color:var(--gold);width:18px;height:18px}
   <div class="console" id="console"></div>
 </div>
 
-<script src="anim-player.js?v=1"></script><script src="p-stand.js?v=6"></script>
+<script src="anim-player.js?v=1"></script><script src="stand-img.js?v=1"></script><script src="p-stand.js?v=7"></script>
 
 <script>var MON_FILES=["earth1", "earth2", "earth3", "elec1", "elec2", "elec3", "fire1", "fire2", "fire3", "water1", "water2", "water3", "wood1", "wood2", "wood3"],MON_V=6;window.MON_ANIM=window.MON_ANIM||{};function loadMon(keys,cb){var need=keys.filter(function(k,i){return keys.indexOf(k)===i&&!MON_ANIM[k]&&MON_FILES.indexOf(k)>=0}),n=need.length;if(!n)return cb();need.forEach(function(k){var s=document.createElement("script");s.src="mon/"+k+".js?v="+MON_V;s.onload=s.onerror=function(){if(--n===0)cb()};document.head.appendChild(s)})}</script>
 <script src="p-qs.js?v=s7"></script>
