@@ -904,7 +904,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 <div class="toast" id="toast" hidden></div>
 
 <div id="bf" hidden></div><div id="rc-ov" hidden></div><div id="rc-bar" hidden role="button" tabindex="0">戰鬥進行中・點這裡回到戰場</div>
-<script src="stand.js?v=20261128i"></script>
+<script src="stand.js?v=20261128j"></script>
 <script></script>
 <script></script>
 <script>
@@ -2523,6 +2523,23 @@ function revealAfter(x) {
   (x.events || []).forEach(function (ev) { if (ev.evolved) chain = chain.then(function () { return revealEvolve(x.me.mons[ev.i]); }); });
   if (x.newEgg >= 0) chain = chain.then(function () { return revealEgg(x.me.mons[x.newEgg]); });
 }
+/* 私人對戰進場前：回合制（預設）或連續攻擊 */
+function turnPickHtml(m) {
+  var rt = m && m.rt === true;
+  return '<div class="row" id="tp" style="gap:8px;align-items:center"><span class="small muted">戰鬥方式</span>' +
+    '<button type="button" class="chip" data-tp="turn" aria-pressed="' + (!rt) + '">回合制</button>' +
+    '<button type="button" class="chip" data-tp="rt" aria-pressed="' + rt + '">連續攻擊</button></div>' +
+    '<p class="small muted" id="tp-h" style="margin:0">' + (rt ? '整場限時，答對就出手，答錯鎖 2 秒，連對 5 題放大招。' : '依速度輪流出招，輪到的人答題，答對才能出招。') + '</p>';
+}
+function turnPickBind(m) {
+  var box = $('#tp'); if (!box || !m) return;
+  box.onclick = function (e) {
+    var b = e.target.closest ? e.target.closest('[data-tp]') : null; if (!b) return;
+    m.rt = b.dataset.tp === 'rt';
+    box.querySelectorAll('[data-tp]').forEach(function (x) { x.setAttribute('aria-pressed', String((x.dataset.tp === 'rt') === m.rt)); });
+    var h = $('#tp-h'); if (h) h.textContent = m.rt ? '整場限時，答對就出手，答錯鎖 2 秒，連對 5 題放大招。' : '依速度輪流出招，輪到的人答題，答對才能出招。';
+  };
+}
 /* 發 PK 邀請（我開房、對方加入就開打） */
 function pkInvite(seat, name) {
   var F = window.fbRoom;
@@ -2531,8 +2548,9 @@ function pkInvite(seat, name) {
   var id = F.D.newId(), m = DU.me = { id: id, role: 'host', kind: 'pk', to: seat, toName: name, joined: {} };
   F.D.open(id, { name: myName(), kind: 'pk', to: seat }).then(function () {
     if (DU.me !== m) return;
-    openOv('<div class="reveal"><h2>已邀請 ' + seat + ' 號 ' + esc(name) + '</h2><p class="muted" style="margin:0">等對方在手機上按「接受」… <b class="num" id="pk-t">60</b> 秒</p><button class="btn ghost big" id="pk-x">取消邀請</button></div>', 'lock');
+    openOv('<div class="reveal"><h2>已邀請 ' + seat + ' 號 ' + esc(name) + '</h2><p class="muted" style="margin:0">等對方在手機上按「接受」… <b class="num" id="pk-t">60</b> 秒</p>' + turnPickHtml(m) + '<button class="btn ghost big" id="pk-x">取消邀請</button></div>', 'lock');
     var left = 60; m.timer = setInterval(function () { left--; var t = $('#pk-t'); if (t) t.textContent = left; if (left <= 0) hostCancel('對方沒有回應，可能沒在看手機。'); }, 1000);
+    turnPickBind(m);
     $('#pk-x').onclick = function () { hostCancel(); };
     m.stop = F.D.watchRoom(id, {
       joined: function (v) { if (DU.me !== m) return; m.joined = v; if (m.started) { hostJoined(m); return; } if (v[seat]) { clearInterval(m.timer); closeOv(); hostStart(); } },
@@ -2565,9 +2583,10 @@ function roomOv() {
   openOv('<div class="ov-head"><h2>我的對戰房間</h2><button class="x" aria-label="先關掉這個視窗">×</button></div>' +
     '<p class="small muted" style="margin:0">同學在自己手機的「私人組隊對戰」看到你的房間，就能加入藍隊或紅隊。每隊最多 5 人，每人帶夥伴一隻上場。戰鬥在你這台跑，其他人用自己的手機操作。</p>' +
     '<div class="lobby"><div class="A"><h3>藍隊 ' + g.A.length + ' 人</h3><ul>' + g.A.map(li).join('') + '</ul></div><div class="B"><h3>紅隊 ' + g.B.length + ' 人</h3><ul>' + (g.B.length ? g.B.map(li).join('') : '<li style="list-style:none;margin-left:-18px;opacity:.6">等同學加入</li>') + '</ul></div></div>' +
-    '<div class="row"><button class="btn orange big" id="rm-go"' + (ok ? '' : ' disabled') + '>開始戰鬥</button><button class="btn ghost" id="rm-x">關閉房間</button></div>' +
+    turnPickHtml(m) + '<div class="row"><button class="btn orange big" id="rm-go"' + (ok ? '' : ' disabled') + '>開始戰鬥</button><button class="btn ghost" id="rm-x">關閉房間</button></div>' +
     (nA > 5 || nB > 5 ? '<p class="small" style="margin:0;color:var(--bad)">每隊最多 5 人，請同學換隊或離開。</p>' : nB && gap > 1 ? '<p class="small" style="margin:0;color:var(--bad)">藍隊 ' + nA + ' 人、紅隊 ' + nB + ' 人，相差 ' + gap + ' 人。兩隊最多只能差 1 人，請同學換隊。</p>' : ''), 'wide');
   $('#ov-box .x').onclick = function () { m.hide = 1; closeOv(); duRender(); };
+  turnPickBind(m);
   $('#rm-go').onclick = function () { hostStart(); };
   $('#rm-x').onclick = function () { hostCancel(); };
 }
@@ -2588,7 +2607,7 @@ function hostStart() {
   call('duelCfg', Object.assign({ A: A, B: B, full: m.kind === 'pk' }, S.auth)).then(function (r) {
     if (DU.me !== m) return;
     var pk = m.kind === 'pk', ch = F.D.host(m.id), res = null;
-    openBattle({ mode: 'duel', me: S.auth.seat, teamA: r.cfg.teamA, teamB: r.cfg.teamB, remote: true, qsubj: r.cfg.qsubj, noNatural: r.cfg.noNatural, joined: guests,
+    openBattle({ mode: 'duel', me: S.auth.seat, teamA: r.cfg.teamA, teamB: r.cfg.teamB, remote: true, turn: m.rt !== true, qsubj: r.cfg.qsubj, noNatural: r.cfg.noNatural, joined: guests,
       title: pk ? 'PK 對戰' : '私人組隊對戰', nameA: pk ? nm(S.auth.seat) : '藍隊', nameB: pk ? nm(B[0]) : '紅隊',
       note: pk ? '對方用自己的手機操作。打完各用掉一次今天的挑戰，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' : '同學用自己的手機操作。私人對戰不算每天 3 次挑戰，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' }, {
       'cb-remote': function (d) { ch.turn(d).then(function (v) { reply({ t: 'cb-remote-res', id: d.id, v: v }); }); },
