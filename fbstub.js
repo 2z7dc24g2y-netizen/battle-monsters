@@ -12,7 +12,7 @@
   window.fbLoad = function () {
     if (P) return P;
     P = ld(B + 'app-compat.js').then(function () { return Promise.all([ld(B + 'auth-compat.js'), ld(B + 'database-compat.js')]); })
-      .then(function () { return ld('fbconfig.js'); }).then(function () { return ld('hatch-fb.js?v=10'); });
+      .then(function () { return ld('fbconfig.js'); }).then(function () { return ld('hatch-fb.js?v=11'); });
     P.catch(function () { P = null; });
     return P;
   };

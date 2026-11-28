@@ -1082,7 +1082,9 @@ var FBX = (function () {
   function srvNow() { return Date.now() + SKEW; }
   window.fbNow = srvNow;
   function monKey(code, seat) { return 'sciHatch.mon.' + code + '-' + seat; }
-  function monOn(code) { var c = C.classes[String(code)]; return !!(c && c.mon && c.mon.on); }
+  /* 老師端每 60 秒續約一次；超過 2.5 分鐘沒續約（例如老師關掉分頁沒按結束）就視為已結束，學生不再被提醒 */
+  var MON_STALE = 150000;
+  function monOn(code) { var c = C.classes[String(code)]; return !!(c && c.mon && c.mon.on && (srvNow() - Number(c.mon.at || 0)) < MON_STALE); }
   function monStamp(code, seat, o) {
     var k = monKey(code, seat), r; try { r = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { r = null; }
     var d = today(); if (!r || r.d !== d) r = { d: d, ev: 0, late: 0, out: 0, lo: 0, bk: 0, dur: 0 };

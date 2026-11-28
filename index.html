@@ -1600,13 +1600,14 @@ function liveMode(m) {
 }
 function stopLive(silent) {
   if (LIVE.on && !silent && S.board) call('updateClass', { tok: S.tok, code: S.board.cls.code, mon: 'off' }).catch(function () {});
-  LIVE.on = false; clearInterval(LIVE.timer); var b = $('#b-live'); if (b) b.setAttribute('aria-pressed', 'false'); var bar = $('#b-livebar'); if (bar) bar.hidden = true;
+  LIVE.on = false; clearInterval(LIVE.timer); clearInterval(LIVE.beat); var b = $('#b-live'); if (b) b.setAttribute('aria-pressed', 'false'); var bar = $('#b-livebar'); if (bar) bar.hidden = true;
   document.querySelectorAll('#b-grid .live,#b-grid .livea').forEach(function (x) { x.remove(); }); document.querySelectorAll('#b-grid .lv-x').forEach(function (x) { x.classList.remove('lv-x'); });
 }
 $('#b-live').onclick = function () {
   if (LIVE.on) { stopLive(); return; }
   LIVE.on = true; LIVE.paused = false; LIVE.open = {}; liveLoad(); this.setAttribute('aria-pressed', 'true');
   liveMode('on'); clearInterval(LIVE.timer); LIVE.timer = setInterval(liveTick, 3000);
+  clearInterval(LIVE.beat); LIVE.beat = setInterval(function () { if (LIVE.on && !LIVE.paused && S.board) call('updateClass', { tok: S.tok, code: S.board.cls.code, mon: 'on' }).catch(function () {}); }, 60000);
   toast('課堂監控開始：學生切走 10 秒沒回來會通知你（學生頁面要開著才能回報）');
 };
 /* 學生端：每分鐘回報一次在哪裡、有沒有在操作 */
