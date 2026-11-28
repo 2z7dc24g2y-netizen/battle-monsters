@@ -304,9 +304,12 @@ input[type=checkbox]{accent-color:var(--gold);width:18px;height:18px}
 @media (max-height:540px){.plate .nm{font-size:10px}.plate{padding:1px 4px 3px;border-radius:7px}.hp{height:7px}.gauge i{height:4px}}
 @media (max-height:540px){.rcard{gap:4px;padding:8px 14px}.rcard h2{font-size:30px}.mvp img{width:52px}.mvp{padding:4px 10px}.statgrid{font-size:12px;gap:0 10px}.rcard .btn.big{min-height:44px;padding:6px 18px}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-iteration-count:1!important}}
+.bossrow{display:flex;gap:8px;justify-content:center}.bossrow img{max-height:62vh;max-width:32vw;object-fit:contain}
+.gain.drop.q2{border:2px solid #f2c14e;box-shadow:0 0 18px rgba(242,193,78,.55);background:linear-gradient(135deg,rgba(255,226,122,.18),rgba(217,162,27,.08))}
+.gain.drop.q3{border:2px solid #b07dff;box-shadow:0 0 22px rgba(160,90,255,.6);background:linear-gradient(135deg,rgba(199,125,255,.2),rgba(106,61,240,.1))}
 </style>
 
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin><script src="split.js?v=1"></script><script src="config.js"></script><script src="fbstub.js?v=2"></script><script>window.SCI_PAGE="isle"</script><script src="sync.js"></script>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin><script src="split.js?v=1"></script><script src="config.js"></script><script src="fbstub.js?v=3"></script><script>window.SCI_PAGE="isle"</script><script src="sync.js"></script>
 </head><body>
 <div class="game">
   <div class="hud">
@@ -330,8 +333,8 @@ input[type=checkbox]{accent-color:var(--gold);width:18px;height:18px}
 
 <script>var MON_FILES=["earth1", "earth2", "earth3", "elec1", "elec2", "elec3", "fire1", "fire2", "fire3", "water1", "water2", "water3", "wood1", "wood2", "wood3"],MON_V=6;window.MON_ANIM=window.MON_ANIM||{};function loadMon(keys,cb){var need=keys.filter(function(k,i){return keys.indexOf(k)===i&&!MON_ANIM[k]&&MON_FILES.indexOf(k)>=0}),n=need.length;if(!n)return cb();need.forEach(function(k){var s=document.createElement("script");s.src="mon/"+k+".js?v="+MON_V;s.onload=s.onerror=function(){if(--n===0)cb()};document.head.appendChild(s)})}</script>
 <script src="p-qs.js?v=s5"></script>
-<script src="gear.js?v=s3"></script>
-<script src="p-core.js?v=s3"></script><script src="school-p.js"></script><script src="battle-wx.js?v=s3"></script><script src="hanabi.js?v=1"></script><script src="ultfx.js?v=1"></script><script src="ending.js?v=1"></script>
+<script src="gear.js?v=s4"></script>
+<script src="p-core.js?v=s4"></script><script src="school-p.js"></script><script src="battle-wx.js?v=s3"></script><script src="hanabi.js?v=1"></script><script src="ultfx.js?v=1"></script><script src="ending.js?v=1"></script>
 <script>
 (function(){
 'use strict';
@@ -441,8 +444,10 @@ function reset(){
   players={};
   P.mons.filter(function(m){return bring.indexOf(m.id)>=0}).forEach(function(m){var lv=lvOf(m.xp),u,pref=S.rows[m.id]||EL[m.el].row,sp=freeSpot('A',pref);
     u=addUnit('A',{el:m.el,lv:lv,stage:stageOf(lv),mon:monName(m.el,lv)},sp[0],sp[1]);u.mid=m.id;applyGear(u)});
-  STG.team.slice(0,Math.max(1,S.teams.A.length)).forEach(function(t,i){var sp=freeSpot('B',EL[t.el].row),u=addUnit('B',{el:t.el,lv:t.lv,stage:stageOf(t.lv),mon:monName(t.el,t.lv)},sp[0],sp[1]);
-    if(STG.isBoss&&i===0){u.max=u.hp=Math.round(u.max*BOSS_HP);u.atk=Math.round(u.atk*BOSS_ATK);u.boss=true}});
+  STG.team.slice(0,STG.bosses?STG.team.length:Math.max(1,S.teams.A.length)).forEach(function(t,i){var sp=freeSpot('B',EL[t.el].row),u=addUnit('B',{el:t.el,lv:t.lv,stage:stageOf(t.lv),mon:monName(t.el,t.lv)},sp[0],sp[1]);
+    if(STG.bosses){var bd=STG.bosses[i],R=BOSS_ROLE[bd.role];u.max=u.hp=Math.round(u.max*R.hp);u.atk=Math.round(u.atk*R.atk);u.boss=true;u.brole=bd.role;u.mon=bd.name.split(' ').pop();u.last=-9;u.enr=0}
+    else if(STG.isBoss&&i===0){u.max=u.hp=Math.round(u.max*BOSS_HP);u.atk=Math.round(u.atk*BOSS_ATK);u.boss=true}});
+  S.combo=-9;
   S.size=Math.max(S.teams.A.length,1);
   $('#nameA').textContent='你的隊伍';$('#nameB').textContent=STG.boss;
   $('#round').textContent='出戰準備';$('#order').hidden=true;renderStage();renderPrep();updateBars();
@@ -548,20 +553,21 @@ function gearHtml(){var g=GB,t=window.GEAR?GEAR.fmt(g.sum):'';return '<div class
 function applyGear(u){var b=GB.sum,pe=function(k){return b['p_'+u.el+'_'+k]||0},el=b['el_'+u.el]||0;
   u.atk=Math.round(u.atk*(1+((b.atk||0)+el+pe('atk'))/100));u.max=u.hp=Math.round(u.max*(1+((b.hp||0)+pe('hp'))/100));u.def=Math.round(u.def*(1+((b.def||0)+pe('def'))/100));
   u.spd+=(b.spd||0)+pe('spd');u.gauge=Math.min(3,(b.gauge||0)+pe('gauge'));
-  u.crit=(b.crit||0)+pe('crit');u.steal=(b.steal||0)+pe('steal');u.counter=(b.counter||0)+pe('counter');u.ultB=(b.ult||0)+pe('ult');u.healB=(b.heal||0)+pe('heal')}
+  u.crit=(b.crit||0)+pe('crit');u.steal=(b.steal||0)+pe('steal');u.counter=(b.counter||0)+pe('counter');u.thorn=(b.thorn||0)+pe('thorn');u.ultB=(b.ult||0)+pe('ult');u.healB=(b.heal||0)+pe('heal')}
 function starSvg(on,sz){return '<svg viewBox="0 0 24 24" width="'+(sz||22)+'" height="'+(sz||22)+'" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="'+(on?'#f2c14e':'#3a2c4d')+'" stroke="'+(on?'#a8791d':'#5b4775')+'" stroke-width="1.4" stroke-linejoin="round"/></svg>'}
 function renderPrep(){
   var c=$('#console'),best=P.clear[STG.id]||0,rw=P.clear[STG.id]?STG.again:STG.first,tdy=P.day.d===todayStr()?P.day.n:0;
   if(!P.mons.length){
     c.innerHTML='<div class="chead"><h2 style="color:var(--gold-2)">還沒有理化獸</h2></div><p>先到<b>理化獸培育中心</b>領養一隻理化獸，再回來挑戰。</p><div class="row"><a class="btn gold big" href="P.html#nursery">去培育中心</a><a class="btn ghost big" href="P.html#arena">回競技場</a></div>';return}
-  if(!STG.duel&&!unlocked(P,STG.i)){c.innerHTML='<div class="chead"><h2 style="color:var(--gold-2)">這一關還沒解鎖</h2></div><p>先通過第 '+STG.i+' 關「'+esc(STAGES[STG.i-1].isle)+'」才能挑戰這裡。</p><div class="row"><a class="btn gold big" href="P.html#arena">回競技場</a></div>';return}
+  if(!STG.duel&&!unlocked(P,STG.i)){c.innerHTML='<div class="chead"><h2 style="color:var(--gold-2)">這一關還沒解鎖</h2></div><p>先通過第 '+(STG.req?stageById(STG.req).i+1:STG.i)+' 關「'+esc(STG.req?stageById(STG.req).isle:STAGES[STG.i-1].isle)+'」才能挑戰這裡。</p><div class="row"><a class="btn gold big" href="P.html#arena">回競技場</a></div>';return}
   var foes=team('B').map(function(t){return t.el}),tips=[];
   foes.forEach(function(f){var k=Object.keys(EL).filter(function(x){return EL[x].beats===f})[0];var s=EL[k].name+' 剋 '+EL[f].name;if(tips.indexOf(s)<0)tips.push(s)});
   c.innerHTML='<div class="chead"><div class="row" style="gap:10px;flex-wrap:nowrap">'+(STG.isBoss?'<img class="bossface" src="'+bossImg(STG,1)+'" alt="">':'')+'<div><div class="small" style="color:var(--gold-2);font-weight:700">'+stgTitle()+'</div><h2>對手：'+esc(STG.boss)+'</h2></div></div>'+
     '<div class="row"><span class="row" style="gap:2px">'+[1,2,3].map(function(n){return starSvg(n<=best)}).join('')+'</span><button class="btn gold big" id="start"'+(S.teams.A.length?'':' disabled')+'>開始挑戰</button></div></div>'+
     '<div class="row small"><b>出戰的理化獸</b>（點選帶誰上場）</div>'+
     '<div class="roster">'+P.mons.map(function(m){var lv=lvOf(m.xp),on=S.bring.indexOf(m.id)>=0;return '<button class="rchip" data-id="'+m.id+'" aria-pressed="'+on+'"><img src="'+STAND[m.el+stageOf(lv)]+'" alt=""><span><b>'+esc(monName(m.el,lv))+'</b><br><span class="elpill" style="background:'+EL[m.el].color+'">'+EL[m.el].name+'・'+EL[m.el].role+'</span> <span class="num">Lv'+lv+'</span></span></button>'}).join('')+'</div>'+
-    '<div class="row">'+(window.BWX?BWX.chip(S.wx):'')+(STG.isBoss?'<span class="wxchip" style="--wc:#ff3d7a"><i></i>Boss 戰：帶頭的 Boss 血量 ×'+BOSS_HP+'、攻擊 ×'+BOSS_ATK+'</span>':'')+'</div>'+
+    '<div class="row">'+(window.BWX?BWX.chip(S.wx):'')+(STG.bosses?'<span class="wxchip" style="--wc:#ff3d7a"><i></i>'+STG.bosses.map(function(b){return esc(b.name.split(' ').pop())+'（'+BOSS_ROLE[b.role].name+'：'+BOSS_ROLE[b.role].desc+'）'}).join('、')+'</span><span class="wxchip" style="--wc:#ff8fd0"><i></i>聯合技「'+esc(STG.combo.name)+'」：'+esc(STG.combo.desc)+'</span>':STG.isBoss?'<span class="wxchip" style="--wc:#ff3d7a"><i></i>Boss 戰：帶頭的 Boss 血量 ×'+BOSS_HP+'、攻擊 ×'+BOSS_ATK+'</span>':'')+
+    (STG.isBoss&&!STG.duel?'<span class="wxchip" style="--wc:#f2c14e"><i></i>'+(STG.bossN>=3?'勝利必得菁英版服裝':STG.bossN===2?'勝利必得金色版服裝（20% 升菁英）':'勝利有 20% 機率得到金色版服裝')+'</span>':'')+'</div>'+
     '<div class="tip">拖曳自己的理化獸可以和別的位置交換，點一下換到下一排。<button class="btn sm" id="autoForm" type="button">一鍵排陣</button> 屬性提示：'+tips.join('、')+'</div>'+
     '<div class="small muted">題目出自'+(STG.id==='ALL'?'全部島嶼':STG.mix?STG.mix.map(function(k){return esc(ISLE_NAMES[k])}).join('、'):esc(STG.isle))+'的例題・'+(STG.duel?'勝利':best?'再次勝利':'首次通關')+' 可得 <b style="color:var(--gold-2)">'+rw+'</b> 經驗能量・今天已領 '+tdy+' / '+DAILY_REWARDED+' 場獎勵'+(STG.duel?'':'（首次通關不限）')+'</div>'+
     gearHtml()+'<div class="row">'+(STG.duel?'<a class="btn ghost" href="'+STG.isl+'.html#ret='+STG.isl+(STG.tier+1)+'">回到島上</a>':'<a class="btn ghost" href="P.html#arena">回競技場</a>')+'<span class="small muted rotate">手機轉成橫向，戰場會更大。</span></div>';
@@ -621,10 +627,11 @@ async function cutin(u){
   $('#stage').appendChild(c);Snd.fx('cutin');await sleep(1250);c.remove();
 }
 /* Boss 登場：立繪從右邊滑進來 */
-function bossImg(st,small){return 'boss/'+st.id+(small?'-s':'')+'.webp'}
+function bossImg(st,small){return 'boss/'+(st.img||st.id)+(small?'-s':'')+'.webp'}
 async function bossIntro(){
   var d=document.createElement('div');d.className='bossin';
-  d.innerHTML='<div class="bt"><small>第 '+(STG.i+1)+' 關・'+esc(STG.isle.replace(/^.*?・/,''))+'</small><b>BOSS</b><span>'+esc(STG.boss)+'</span></div><img src="'+bossImg(STG)+'" alt="'+esc(STG.boss)+'">';
+  d.innerHTML='<div class="bt"><small>第 '+(STG.i+1)+' 關・'+esc(STG.isle.replace(/^.*?・/,''))+'</small><b>'+(STG.bosses?['','','雙 ','三 '][STG.bosses.length]+'BOSS':'BOSS')+'</b><span>'+esc(STG.boss)+'</span></div>'+
+    (STG.bosses?'<div class="bossrow">'+STG.bosses.map(function(b){return '<img src="boss/'+b.img+'.webp" alt="'+esc(b.name)+'">'}).join('')+'</div>':'<img src="'+bossImg(STG)+'" alt="'+esc(STG.boss)+'">');
   document.body.appendChild(d);Snd.fx('cutin');setTimeout(function(){Snd.fx('crit')},450);await sleep(2600);d.classList.add('out');await sleep(350);d.remove()}
 async function vsIntro(){
   var v=document.createElement('div');v.className='vs';
@@ -711,16 +718,17 @@ function renderOrder(){
   S.order.forEach(function(id,i){var u=S.units[id];if(!u.alive&&i>=S.turn)return;html+='<span class="o '+u.side+(i===S.turn-1?' now':i<S.turn-1?' done':'')+'" title="'+esc(nm(u))+'">'+face(u)+'</span>'});
   o.innerHTML=html;
 }
+function maxR(){return STG.bosses?14:MAXR}
 async function loop(){
   newOrder();
   await banner('第 1 輪','#2b2039');
   while(!S.over){
     if(S.turn>=S.order.length){
-      S.round++;if(S.round>MAXR)return finish(null);
+      S.round++;if(S.round>maxR())return finish(null);
       Object.keys(S.units).forEach(function(k){var u=S.units[k];if(u.shield){u.shield=false;refresh(u)}});
-      newOrder();$('#round').textContent='第 '+S.round+' / '+MAXR+' 輪';await banner('第 '+S.round+' 輪'+(S.round===MAXR?'（最後一輪）':''),'#2b2039');
+      newOrder();$('#round').textContent='第 '+S.round+' / '+maxR()+' 輪';await banner('第 '+S.round+' 輪'+(S.round===maxR()?'（最後一輪）':''),'#2b2039');
     }
-    $('#round').textContent='第 '+S.round+' / '+MAXR+' 輪';
+    $('#round').textContent='第 '+S.round+' / '+maxR()+' 輪';
     var u=S.units[S.order[S.turn++]];if(!u||!u.alive)continue;
     renderOrder();
     await takeTurn(u);
@@ -737,7 +745,14 @@ async function finish(w){
   await banner(won?'挑戰成功！':w==='draw'?'平手':'挑戰失敗',won?'#3d7fd0':w==='draw'?'#2b2039':'#8a2b20');
   var sa=S.stats.A,sb=S.stats.B,ko=team('A').filter(function(u){return !u.alive}).length,acc=sa.asked?sa.correct/sa.asked:0;
   var stars=won?1+(ko===0?1:0)+(acc>=.7?1:0):0;
-  P=loadP();var prev=P.clear[STG.id]||0,rw=STG.duel?duelReward(P,STG,won):battleReward(P,STG,won);P.bxp+=rw.xp;P.battles=(P.battles||0)+1;if(won){P.wins=(P.wins||0)+1;if(!STG.duel)P.clear[STG.id]=Math.max(prev,stars)}saveP(P);
+  P=loadP();var prev=P.clear[STG.id]||0,rw=STG.duel?duelReward(P,STG,won):battleReward(P,STG,won);P.bxp+=rw.xp;P.battles=(P.battles||0)+1;if(won){P.wins=(P.wins||0)+1;if(!STG.duel)P.clear[STG.id]=Math.max(prev,stars)}
+  /* 隱藏服裝與 Boss 掉寶（今天的戰鬥獎勵領完就不掉寶） */
+  var hid=won?hiddenFor(STG):0,newHid=hid&&!(P.hid||{})[hid];if(newHid){P.hid=P.hid||{};P.hid[hid]=1}
+  var drop=won&&STG.isBoss&&!STG.duel&&!rw.capped?rollDrop(P,STG):null;if(drop&&drop.none){P.bxp+=100;rw.xp+=100}
+  saveP(P);
+  var QN=['','普通','金色','菁英'],dropHtml=(newHid?'<div class="gain drop q3"><b style="font-size:20px">發現隱藏服裝「'+esc(HIDDEN[hid].name)+'」</b><span>'+esc(HIDDEN[hid].eff)+'・到換裝屋穿上它</span></div>':'')+
+    (drop?(drop.none?'<div class="gain drop q'+drop.q+'"><b style="font-size:20px">'+QN[drop.q]+'寶箱</b><span>你擁有的服裝都已經是'+QN[drop.q]+'版以上，改送 100 經驗能量</span></div>'
+      :'<div class="gain drop q'+drop.q+'"><b style="font-size:20px">獲得'+QN[drop.q]+'版「'+esc(drop.name)+'」</b><span>'+QN[drop.was]+'版升級成'+QN[drop.q]+'版・服裝效果 ×'+(drop.q>2?2:1.5)+'</span></div>'):'');
   var all=Object.keys(S.units).map(function(k){return S.units[k]}).filter(function(u){return u.side==='A'}).sort(function(a,b){return (b.dmg+b.heal)-(a.dmg+a.heal)});
   var mvp=all[0],pc=function(s){return s.presses?Math.round(s.perfect/s.presses*100)+'%':'–'},next=STG.duel?null:STAGES[STG.i+1];
   var r=document.createElement('div');r.className='result';
@@ -746,7 +761,7 @@ async function finish(w){
       '<div class="small muted">勝利 1 星・沒有理化獸倒下 +1 星・答對率 70% 以上 +1 星（這場 '+Math.round(acc*100)+'%）</div>':
       '<div class="small muted">'+(byHp?'打滿 10 輪，比剩餘血量。':'你的理化獸全倒了。')+'照下面的方法變強再來挑戰！</div>'+
       '')+
-    '<div class="gain"><b class="num">+'+rw.xp+'</b><span>經驗能量'+(rw.first&&!STG.duel?'・首次通關獎勵':rw.capped?'・今天的戰鬥獎勵已領完':'')+'</span></div>'+(rw.medal?'<div class="gain" style="border:2px solid var(--gold)"><b style="font-size:20px">獲得'+esc(STG.isle)+'島主勳章</b><span>每枚勳章讓理化獸攻擊 +1%</span></div>':'')+
+    '<div class="gain"><b class="num">+'+rw.xp+'</b><span>經驗能量'+(rw.first&&!STG.duel?'・首次通關獎勵':rw.capped?'・今天的戰鬥獎勵已領完':'')+'</span></div>'+(rw.medal?'<div class="gain" style="border:2px solid var(--gold)"><b style="font-size:20px">獲得'+esc(STG.isle)+'島主勳章</b><span>每枚勳章讓理化獸攻擊 +1%</span></div>':'')+dropHtml+
     (mvp?'<div class="mvp"><img src="'+standImg(mvp)+'" alt="" style="transform:scaleX(-1)"><div><span class="tag">MVP</span><div style="font-family:var(--f-display);font-size:22px">'+esc(nm(mvp))+'</div><div class="small muted">造成 '+mvp.dmg+' 傷害'+(mvp.heal?'・治療 '+mvp.heal:'')+'</div></div></div>':'')+
     '<div class="statgrid"><span></span><span class="h A">你</span><span class="h B">'+esc(STG.boss)+'</span>'+
     '<span class="k">答對題數</span><span class="num">'+sa.correct+' / '+sa.asked+'</span><span class="num">'+sb.correct+' / '+sb.asked+'</span>'+
@@ -762,8 +777,21 @@ async function finish(w){
 }
 function setActing(u){document.querySelectorAll('.mon.acting').forEach(function(e){e.classList.remove('acting')});var e=u&&el(u);if(e)e.classList.add('acting')}
 function whoHtml(u,sub){return '<div class="who '+u.side+'"><span class="face">'+face(u)+'</span><div><b>'+sideName(u.side)+'・'+esc(nm(u))+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div></div>'}
+/* 多 Boss 的行動：聯合技、輔助型補血、防禦型上盾；隊友 Boss 被擊倒時其他 Boss 會憤怒（攻擊 +20%） */
+async function bossSkill(u){
+  var bs=alive('B').filter(function(x){return x.boss}),dead=team('B').filter(function(x){return x.boss&&!x.alive}).length;
+  if(dead>u.enr){u.enr=dead;u.atk=Math.round(u.atk*1.2);floatTxt(u,'攻擊 +20%','block',{t:'憤怒！',c:'#ff6a3d'});tempCls(u,'hitB',600);await sleep(500)}
+  var say=async function(t,sub){$('#console').innerHTML='<div class="chead">'+whoHtml(u,sub)+'</div><h2 style="text-align:center;color:#ff8fd0">'+t+'</h2>';Snd.fx('cutin');await sleep(900)};
+  if(STG.combo&&bs.length>=2&&S.round%3===0&&S.combo!==S.round){S.combo=S.round;
+    await say('聯合技・'+esc(STG.combo.name)+'！',bs.map(function(x){return esc(nm(x))}).join(' ＋ ')+' 合力攻擊');flash('#ff4f81');shake();
+    var tg=alive('A');tg.forEach(function(t){damage(u,t,.55,'good',0)});await sleep(900);return true}
+  if(u.brole==='sup'&&S.round-u.last>=2){var low=bs.filter(function(x){return x.hp<x.max*.6}).sort(function(a,b){return a.hp/a.max-b.hp/b.max})[0];
+    if(low){u.last=S.round;await say('治療 '+esc(nm(low)),'輔助型 Boss');act(u,'skill');heal(u,low,.15);await sleep(700);return true}}
+  if(u.brole==='def'&&S.round-u.last>=3&&bs.length){u.last=S.round;await say('全體 Boss 上護盾！','防禦型 Boss・這一輪受到的傷害減少');act(u,'skill');bs.forEach(function(x){x.shield=true;refresh(x);particles(x,'rock',8)});Snd.fx('block');await sleep(700);return true}
+  return false}
 async function takeTurn(u){
   setActing(u);
+  if(u.boss&&u.brole&&isCpu(u.side)&&await bossSkill(u)){setActing(null);return}
   if(S.quiz){var ok=await askQuestion(u);S.stats[u.side].asked++;if(ok){S.stats[u.side].correct++;if(u.gauge<3){u.gauge++;refresh(u);Snd.fx('gauge');particles(u,'heal',8)}}}
   var a=await chooseAction(u);
   await perform(u,a);
@@ -866,11 +894,13 @@ async function defensePress(targets){
 function elemMult(a,d){return EL[a.el].beats===d.el?ADV:EL[d.el].beats===a.el?DIS:1}
 function damage(a,t,mult,az,blk){
   var b=t.shield?SHIELD_B:blk,em=elemMult(a,t);
-  var crit=!!(a.crit&&Math.random()*100<a.crit),raw=DMG*a.atk*mult*ATK[az]*em*(1-t.def/220)*(.95+Math.random()*.1)*(crit?1.5:1);
+  var crit=!!(a.crit&&Math.random()*100<Math.min(40,a.crit)),raw=DMG*a.atk*mult*ATK[az]*em*(1-t.def/220)*(.95+Math.random()*.1)*(crit?1.5:1);
   var dmg=Math.max(1,Math.round(raw*(1-b)));
   var real=Math.min(dmg,t.hp);t.hp-=real;a.dmg+=real;S.stats[a.side].dmg+=real;
   /* 吸血：打到對手回一點自己的血 */
-  if(a.steal&&real>0&&a.alive&&a.hp<a.max){var sh=Math.min(a.max-a.hp,Math.max(1,Math.round(real*a.steal/100)));a.hp+=sh;a.heal+=sh;setTimeout(function(){floatTxt(a,'+'+sh,'heal',{t:'吸血',c:'#ff8fb0'});refresh(a)},260)}
+  if(a.steal&&real>0&&a.alive&&a.hp<a.max){var sh=Math.min(a.max-a.hp,Math.round(a.max*.1),Math.max(1,Math.round(real*a.steal/100)));a.hp+=sh;a.heal+=sh;setTimeout(function(){floatTxt(a,'+'+sh,'heal',{t:'吸血',c:'#ff8fb0'});refresh(a)},260)}
+  /* 反傷：被打到就把部分傷害彈回去（最多對方最大血量 8%、最多把對方打到剩 1 血；反彈的傷害不會再被反傷） */
+  if(t.thorn&&real>0&&a.alive&&a.hp>1&&!S._thorn){var td=Math.min(a.hp-1,Math.round(a.max*.08),Math.max(1,Math.round(real*t.thorn/100)));if(td>0){a.hp-=td;t.dmg+=td;S.stats[t.side].dmg+=td;setTimeout(function(){floatTxt(a,'-'+td,'dmg',{t:'反傷',c:'#9be38f'});act(a,'hurt');refresh(a)},380)}}
   /* 反擊：完美防守時把部分傷害彈回去 */
   if(t.counter&&b>=.7&&t.alive&&a.alive&&t.hp>0){var cd=Math.max(1,Math.round(raw*t.counter/100)),cr=Math.min(cd,a.hp);a.hp-=cr;t.dmg+=cr;S.stats[t.side].dmg+=cr;
     var died=a.hp<=0;if(died){a.hp=0;a.alive=false}
@@ -931,6 +961,7 @@ async function perform(u,a){
 
 reset();
 cloudSync(P,function(){reset()});
+window.__pb={team:team,winner:winner,bossSkill:bossSkill,finish:finish,st:function(){return S}}; /* 自動測試用 */
 })();
 </script>
 

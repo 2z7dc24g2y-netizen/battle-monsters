@@ -59,11 +59,22 @@ var STAGES=[
  ['BS2','I','Boss 戰・深海指揮艦','深海指揮官 波賽',[['water',27],['elec',26],['fire',26]],['F','I','K'],1],
  ['BS3','L','Boss 戰・古森林神殿','森林賢者 綠蒂',[['wood',28],['water',27],['earth',27]],['D','G','L'],1],
  ['BS4','H','Boss 戰・水晶地心','大地守護者 岩鐵',[['earth',29],['fire',28],['elec',28]],['A','E','H'],1],
- ['ALL','ALL','最終 Boss・理化獸競技場','雷霆元帥 辛巴王',[['elec',30],['earth',29],['water',29]],null,1]
-].map(function(s,i){var b=!!s[6];return{id:s[0],isl:s[1],isle:s[2],boss:s[3],team:s[4].map(function(t){return{el:t[0],lv:t[1]}}),mix:s[5]||null,isBoss:b,i:i,
+ ['ALL','ALL','最終 Boss・理化獸競技場','雷霆元帥 辛巴王',[['elec',30],['earth',29],['water',29]],null,1],
+ /* 多 Boss 合作挑戰（回合制）：通過第 27 關解鎖雙 Boss、通過第 29 關解鎖三 Boss；勝利必掉寶 */
+ ['DB','J','雙 Boss 戰・熔岩與深海','赫菲 ＆ 波賽',[['fire',28],['water',28]],['B','C','F','I','J','K'],2],
+ ['TB','ALL','三 Boss 戰・三神殿聯軍','岩鐵・綠蒂・赫菲',[['earth',30],['wood',30],['fire',30]],null,3]
+].map(function(s,i){var b=!!s[6];return{id:s[0],isl:s[1],isle:s[2],boss:s[3],team:s[4].map(function(t){return{el:t[0],lv:t[1]}}),mix:s[5]||null,isBoss:b,bossN:s[6]||0,i:i,
   cpuAns:Math.min(.9,.5+i*.012+(b?.04:0)),cpuK:Math.min(.46,.18+i*.009+(b?.03:0)),first:40+i*12+(b?60:0),again:10+Math.round(i*1.6)}});
 /* Boss 戰：帶頭的 Boss 理化獸血量 ×1.8、攻擊 ×1.15，而且不管你帶幾隻，Boss 一定上場 */
 var BOSS_HP=1.8,BOSS_ATK=1.15;
+/* 多 Boss：每隻 Boss 有自己的定位。atk 攻擊型（攻擊高）、sup 輔助型（替隊友補血）、def 防禦型（替全隊上護盾） */
+var MULTI_BOSS={
+  DB:{req:'BS2',combo:{name:'熔岩蒸氣爆',desc:'兩隻 Boss 都在場時，每 3 輪合力攻擊你的全隊一次'},list:[
+    {img:'BS1',name:'熔岩鍛造師 赫菲',role:'atk'},{img:'BS2',name:'深海指揮官 波賽',role:'sup'}]},
+  TB:{req:'BS4',combo:{name:'三神殿共鳴',desc:'兩隻以上 Boss 在場時，每 3 輪合力攻擊你的全隊一次'},list:[
+    {img:'BS4',name:'大地守護者 岩鐵',role:'def'},{img:'BS3',name:'森林賢者 綠蒂',role:'sup'},{img:'BS1',name:'熔岩鍛造師 赫菲',role:'atk'}]}};
+var BOSS_ROLE={atk:{name:'攻擊型',hp:1.6,atk:1.3,desc:'攻擊特別痛'},sup:{name:'輔助型',hp:1.5,atk:1,desc:'每 2 輪替血最少的 Boss 補 15% 血'},def:{name:'防禦型',hp:2.1,atk:.9,desc:'每 3 輪替全部 Boss 上護盾'}};
+STAGES.forEach(function(s){var m=MULTI_BOSS[s.id];if(m){s.bosses=m.list;s.req=m.req;s.combo=m.combo;s.img=m.list[0].img}});
 function stageIsles(st){return st.id==='ALL'?null:(st.mix||[st.isl])}
 var ISLE_COL={A:'#de774c',B:'#e9a23b',C:'#c96a7a',D:'#7aa35a',E:'#4f7fa6',F:'#5aa6a0',G:'#8fb173',H:'#b08a62',I:'#c06a1a',J:'#d9574a',K:'#5fa8c8',Q:'#7a6fb8',L:'#5f9b5b',M:'#a07a5a',N:'#4e8a62',ALL:'#e0583a'};
 function stageCol(st){return ISLE_COL[st.id]||ISLE_COL[st.isl]||'#e0583a'}
@@ -106,7 +117,29 @@ var DAILY_REWARDED=8;
 function battleReward(p,st,won){var t=todayStr();if(p.day.d!==t)p.day={d:t,n:0};
   var first=won&&!p.clear[st.id];if(!first&&p.day.n>=DAILY_REWARDED)return{xp:0,capped:true,first:false};
   var xp=first?st.first:won?st.again:5;if(!first)p.day.n++;return{xp:xp,first:first}}
-function unlocked(p,i){return i===0||!!p.clear[STAGES[i-1].id]}
+function unlocked(p,i){var s=STAGES[i];if(s&&s.req)return !!p.clear[s.req];return i===0||!!p.clear[STAGES[i-1].id]}
+
+/* ---- 競技島 Boss 掉寶：只在 Boss 關卡勝利、而且今天的戰鬥獎勵還沒領完時判定 ----
+ * 單 Boss：20% 金色；雙 Boss：保證金色，另外 20% 升成菁英（同一份獎勵）；三 Boss：保證菁英
+ * 掉落的是你已經擁有的服裝，品質只升不降（普通 → 金色 → 菁英） */
+function dropQuality(n,r){r=r==null?Math.random():r;if(n>=3)return 3;if(n===2)return r<.2?3:2;if(n===1)return r<.2?2:0;return 0}
+function ownCode(code,p){
+  if(code===0||code==null)return false;var c=String(code),m;
+  if((m=/^([A-Q])(\d+)$/.exec(c)))return !!(readJ(ISLE_KEYS[m[1]]).stamps||{})[m[2]];
+  if((m=/^([A-Q])all$/.exec(c))){var st=readJ(ISLE_KEYS[m[1]]).stamps||{};return Object.keys(st).filter(function(x){return st[x]}).length>=(ISLE_UNITS[m[1]]||99)}
+  if((m=/^X(\d)$/.exec(c)))return !!((p||loadP()).hid||{})[m[1]];
+  if((m=/^Z(.+)$/.exec(c)))return !!((readJ('sciIsles.cap.v1').ach)||{})[m[1]];
+  return false}
+function ownedItems(p){var out=[],I=window.GEAR_ITEMS||{};Object.keys(I).forEach(function(cat){var o=I[cat];(o.lock||[]).forEach(function(code,i){if(ownCode(code,p))out.push({cat:cat,name:o.names[i]})})});return out}
+function rollDrop(p,st){
+  var q=dropQuality(st.bossN||0);if(!q||!window.GEAR||!GEAR.qUp)return null;
+  var qm=GEAR.qLoad(),own=ownedItems(p),pool=own.filter(function(x){return GEAR.qOf(qm,x.cat,x.name)<q});
+  if(!pool.length)return{q:q,none:true,owned:own.length};
+  var it=pool[Math.floor(Math.random()*pool.length)],was=GEAR.qOf(qm,it.cat,it.name);GEAR.qUp(it.cat,it.name,q);
+  return{q:q,cat:it.cat,name:it.name,was:was}}
+/* 隱藏服裝：1 蚊子斗篷（吸血）＝打贏生物構造島最強挑戰者；2 雷霆戰甲（暴擊）＝打贏電磁島最強挑戰者；3 仙人掌護甲（反傷）＝打贏三 Boss 戰 */
+var HIDDEN={1:{name:'蚊子斗篷',eff:'攻擊時吸血'},2:{name:'雷霆戰甲',eff:'暴擊率提高'},3:{name:'仙人掌護甲',eff:'被攻擊時反傷'}};
+function hiddenFor(st){if(st.duel&&st.tier===2&&st.isl==='D')return 1;if(st.duel&&st.tier===2&&st.isl==='Q')return 2;if(st.id==='TB')return 3;return 0}
 
 /* ---- 怎麼變強：依目前紀錄給建議（戰敗畫面、能量站共用） ---- */
 var ISLE_UNITS={A:9,B:13,C:7,D:18,E:18,F:11,G:16,H:10,I:16,J:16,K:9,Q:8,L:14,M:14,N:14};
