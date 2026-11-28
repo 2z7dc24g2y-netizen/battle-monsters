@@ -339,7 +339,7 @@ function board_(S, cls) {
   var hatched = students.filter(function (s) { return s.hatchedCount > 0; }).length;
   var doneToday = students.filter(function (s) { return s.todayCount >= s.todayTotal && s.todayCount > 0; }).length;
   return {
-    cls: { code: cls.code, name: cls.name, count: cls.count, scope: cls.scope || [], qsubj: cls.qsubj || [], gear: gearOn_(cls), mission: misOn_(cls) ? cls.mission : null, duel: duelOn_(cls) ? cls.duel : null },
+    cls: { code: cls.code, name: cls.name, count: cls.count, scope: cls.scope || [], qsubj: cls.qsubj || [], qnat: cls.qnat !== false, gear: gearOn_(cls), mission: misOn_(cls) ? cls.mission : null, duel: duelOn_(cls) ? cls.duel : null },
     students: students, hatched: hatched, doneToday: doneToday, today: S.today()
   };
 }
@@ -478,6 +478,7 @@ var API = {
     /* 對戰題目用自然科學島的題庫（內建在對戰畫面裡），不用會考題 */
     cfg.tok = x.pend.tok;
     cfg.qsubj = (a.cls && a.cls.qsubj) || [];
+    cfg.noNatural = !!(a.cls && a.cls.qnat === false);
     return { cfg: cfg, battlesLeft: battlesLeft_(S, st) };
   },
   /* 按下「開始戰鬥」才算一次挑戰（在出戰準備畫面離開不扣次數） */
@@ -645,6 +646,8 @@ var API = {
     if (p.name != null && String(p.name).trim()) cls.name = String(p.name).trim();
     if (p.scope) cls.scope = p.scope;
     if (Array.isArray(p.qsubj)) cls.qsubj = p.qsubj.filter(function (k) { return SUBJ_KEYS.indexOf(k) >= 0; }).slice(0, 10);
+    if (typeof p.qnat === 'boolean') cls.qnat = p.qnat;
+    if (cls.qnat === false && !(cls.qsubj || []).length) fail_('自然科學島和其他科目至少要勾選一個。');
     if (p.gear != null) cls.gear = p.gear ? '1' : '0';
     /* 課堂監控：on 開始、pause 暫停、off 結束（學生頁面依這個決定要不要記錄離開） */
     if (p.mon != null) cls.mon = p.mon === 'on' ? { on: true, at: Date.now() } : p.mon === 'pause' ? { on: false, paused: true, at: Date.now() } : null;
@@ -709,7 +712,7 @@ var API = {
       roster.push(pick);
     });
     if (!roster.length) fail_('班上還沒有孵化的理化獸，先讓同學完成每日訓練吧。');
-    return { roster: roster, questions: [], qsubj: cls.qsubj || [], xpWin: GAME.XP_WIN, xpLose: GAME.XP_LOSE };
+    return { roster: roster, questions: [], qsubj: cls.qsubj || [], noNatural: cls.qnat === false, xpWin: GAME.XP_WIN, xpLose: GAME.XP_LOSE };
   },
   teacherAward: function (S, p) {
     var cls = myClass_(S, authStaff_(S, p), p.code), events = [];
@@ -945,6 +948,7 @@ API.duelCfg = function (S, p) {
   var cfg = { teamA: units(A), teamB: units(B) };
   if (!cfg.teamA.length || !cfg.teamB.length) fail_('有一隊的理化獸都還沒孵化。');
   cfg.qsubj = cls.qsubj || [];
+  cfg.noNatural = cls.qnat === false;
   return { cfg: cfg, xpWin: GAME.XP_WIN, xpLose: GAME.XP_LOSE, battlesLeft: battlesLeft_(S, a.st) };
 };
 /* 對戰結束：每個人結算自己（同一場只算一次）；今天還有挑戰次數才扣一次、拿經驗 */

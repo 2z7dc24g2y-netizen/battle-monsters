@@ -904,7 +904,7 @@ table.pins th,table.pins td{border-bottom-color:rgba(255,255,255,.09)}
 <div class="toast" id="toast" hidden></div>
 
 <div id="bf" hidden></div><div id="rc-ov" hidden></div><div id="rc-bar" hidden role="button" tabindex="0">戰鬥進行中・點這裡回到戰場</div>
-<script src="stand.js?v=20261128g"></script>
+<script src="stand.js?v=20261128h"></script>
 <script></script>
 <script></script>
 <script>
@@ -1924,19 +1924,21 @@ $('#b-scope').onclick = function () {
   }, '每日訓練出題範圍');
 };
 /* 對戰題目科目（老師勾選；自然科學島一定出題） */
-function subjLabel_(cls) { return '自然科' + ((cls && cls.qsubj) || []).map(function (k) { return '＋' + (SUBJ[k] ? SUBJ[k].name : k); }).join(''); }
+function subjLabel_(cls) { var n = (cls && cls.qnat === false) ? [] : ['自然科']; ((cls && cls.qsubj) || []).forEach(function (k) { n.push(SUBJ[k] ? SUBJ[k].name : k); }); return n.join('＋'); }
 function renderSubjBtn() { var b = $('#b-subj'); if (b && S.board) b.textContent = '對戰題目：' + subjLabel_(S.board.cls); }
 $('#b-subj').onclick = function () {
-  var sel = {}; ((S.board.cls.qsubj) || []).forEach(function (k) { sel[k] = 1; });
+  var sel = {}; ((S.board.cls.qsubj) || []).forEach(function (k) { sel[k] = 1; }); var nat = S.board.cls.qnat !== false;
   openOv('<div class="ov-head"><h2>對戰題目科目</h2><button class="x" aria-label="關閉">×</button></div>' +
-    '<p class="small muted" style="margin:0">自然科學島一定會出題。勾選的科目會加入白板對戰、私人對戰和同學對戰的題庫。</p>' +
-    '<div class="row" id="sj"><span class="chip" aria-pressed="true" style="pointer-events:none">自然科學島（固定）</span>' +
+    '<p class="small muted" style="margin:0">自然科學島預設會出題，可以取消。勾選的科目會加入白板對戰、私人對戰和同學對戰的題庫；兩者至少要留一個。</p>' +
+    '<div class="row" id="sj"><button type="button" class="chip" id="sj-nat" aria-pressed="' + nat + '">自然科學島</button>' +
     Object.keys(SUBJ).map(function (k) { return '<button type="button" class="chip" data-s="' + k + '" aria-pressed="' + !!sel[k] + '">' + esc(SUBJ[k].name) + '</button>'; }).join('') +
     '</div><div class="row"><button class="btn green" id="sj-save">儲存</button></div>', 'wide');
   $('#sj').querySelectorAll('.chip[data-s]').forEach(function (c) { c.onclick = function () { var k = c.dataset.s; if (sel[k]) delete sel[k]; else sel[k] = 1; c.setAttribute('aria-pressed', !!sel[k]); }; });
+  $('#sj-nat').onclick = function () { nat = !nat; $('#sj-nat').setAttribute('aria-pressed', nat); };
   $('#sj-save').onclick = function () {
+    if (!nat && !Object.keys(sel).length) { toast('自然科學島和其他科目至少要勾選一個'); return; }
     var b = this; busy(b, true, '儲存中');
-    call('updateClass', { tok: S.tok, code: S.board.cls.code, qsubj: Object.keys(sel) }).then(function (d) { S.board = d; closeOv(); renderSubjBtn(); toast('對戰題目已更新'); }).catch(function (e) { toast(e.message); busy(b, false); });
+    call('updateClass', { tok: S.tok, code: S.board.cls.code, qnat: nat, qsubj: Object.keys(sel) }).then(function (d) { S.board = d; closeOv(); renderSubjBtn(); toast('對戰題目已更新'); }).catch(function (e) { toast(e.message); busy(b, false); });
   };
 };
 
@@ -2169,7 +2171,7 @@ $('#b-battle').onclick = function () {
   call('teacherRoster', { tok: S.tok, code: code }).then(function (r) {
     var events = [], lastJ = { seats: [], pressed: [], sides: {} }, stopW = null, rtOff = null;
     var go = function () {
-      openBattle({ mode: 'teacher', roster: r.roster, questions: r.questions, qsubj: r.qsubj, canAward: true, xpWin: r.xpWin, xpLose: r.xpLose, remote: !!FBR, joined: [], pressed: [] }, {
+      openBattle({ mode: 'teacher', roster: r.roster, questions: r.questions, qsubj: r.qsubj, noNatural: r.noNatural, canAward: true, xpWin: r.xpWin, xpLose: r.xpLose, remote: !!FBR, joined: [], pressed: [] }, {
         'cb-ready': function () { reply({ t: 'cb-joined', seats: lastJ.seats, pressed: lastJ.pressed, sides: lastJ.sides }); },
         'cb-remote': function (d) { FBR.T.turn(code, d).then(function (v) { reply({ t: 'cb-remote-res', id: d.id, v: v }); }); },
         'cb-state': function (d) { FBR.T.state(code, d).catch(function () {}); },
@@ -2583,7 +2585,7 @@ function hostStart() {
   call('duelCfg', Object.assign({ A: A, B: B, full: m.kind === 'pk' }, S.auth)).then(function (r) {
     if (DU.me !== m) return;
     var pk = m.kind === 'pk', ch = F.D.host(m.id), res = null;
-    openBattle({ mode: 'duel', me: S.auth.seat, teamA: r.cfg.teamA, teamB: r.cfg.teamB, remote: true, qsubj: r.cfg.qsubj, joined: guests,
+    openBattle({ mode: 'duel', me: S.auth.seat, teamA: r.cfg.teamA, teamB: r.cfg.teamB, remote: true, qsubj: r.cfg.qsubj, noNatural: r.cfg.noNatural, joined: guests,
       title: pk ? 'PK 對戰' : '私人組隊對戰', nameA: pk ? nm(S.auth.seat) : '藍隊', nameB: pk ? nm(B[0]) : '紅隊',
       note: pk ? '對方用自己的手機操作。打完各用掉一次今天的挑戰，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' : '同學用自己的手機操作。私人對戰不算每天 3 次挑戰，勝利每隻出戰的理化獸 +' + r.xpWin + ' XP，輸了也有 +' + r.xpLose + ' XP。' }, {
       'cb-remote': function (d) { ch.turn(d).then(function (v) { reply({ t: 'cb-remote-res', id: d.id, v: v }); }); },
