@@ -309,7 +309,7 @@ input[type=checkbox]{accent-color:var(--gold);width:18px;height:18px}
 .gain.drop.q3{border:2px solid #b07dff;box-shadow:0 0 22px rgba(160,90,255,.6);background:linear-gradient(135deg,rgba(199,125,255,.2),rgba(106,61,240,.1))}
 </style>
 
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin><script src="split.js?v=1"></script><script src="config.js"></script><script src="fbstub.js?v=4"></script><script>window.SCI_PAGE="isle"</script><script src="sync.js"></script>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin><script src="split.js?v=1"></script><script src="config.js"></script><script src="fbstub.js?v=5"></script><script>window.SCI_PAGE="isle"</script><script src="sync.js"></script>
 </head><body>
 <div class="game">
   <div class="hud">
@@ -333,8 +333,8 @@ input[type=checkbox]{accent-color:var(--gold);width:18px;height:18px}
 
 <script>var MON_FILES=["earth1", "earth2", "earth3", "elec1", "elec2", "elec3", "fire1", "fire2", "fire3", "water1", "water2", "water3", "wood1", "wood2", "wood3"],MON_V=6;window.MON_ANIM=window.MON_ANIM||{};function loadMon(keys,cb){var need=keys.filter(function(k,i){return keys.indexOf(k)===i&&!MON_ANIM[k]&&MON_FILES.indexOf(k)>=0}),n=need.length;if(!n)return cb();need.forEach(function(k){var s=document.createElement("script");s.src="mon/"+k+".js?v="+MON_V;s.onload=s.onerror=function(){if(--n===0)cb()};document.head.appendChild(s)})}</script>
 <script src="p-qs.js?v=s5"></script>
-<script src="gear.js?v=s4"></script>
-<script src="p-core.js?v=s4"></script><script src="school-p.js"></script><script src="battle-wx.js?v=s3"></script><script src="hanabi.js?v=1"></script><script src="ultfx.js?v=1"></script><script src="ending.js?v=1"></script>
+<script src="gear.js?v=s5"></script>
+<script src="p-core.js?v=s5"></script><script src="school-p.js"></script><script src="battle-wx.js?v=s3"></script><script src="hanabi.js?v=1"></script><script src="ultfx.js?v=1"></script><script src="ending.js?v=1"></script>
 <script>
 (function(){
 'use strict';
@@ -445,7 +445,7 @@ function reset(){
   P.mons.filter(function(m){return bring.indexOf(m.id)>=0}).forEach(function(m){var lv=lvOf(m.xp),u,pref=S.rows[m.id]||EL[m.el].row,sp=freeSpot('A',pref);
     u=addUnit('A',{el:m.el,lv:lv,stage:stageOf(lv),mon:monName(m.el,lv)},sp[0],sp[1]);u.mid=m.id;applyGear(u)});
   STG.team.slice(0,STG.bosses?STG.team.length:Math.max(1,S.teams.A.length)).forEach(function(t,i){var sp=freeSpot('B',EL[t.el].row),u=addUnit('B',{el:t.el,lv:t.lv,stage:stageOf(t.lv),mon:monName(t.el,t.lv)},sp[0],sp[1]);
-    if(STG.bosses){var bd=STG.bosses[i],R=BOSS_ROLE[bd.role];u.max=u.hp=Math.round(u.max*R.hp);u.atk=Math.round(u.atk*R.atk);u.boss=true;u.brole=bd.role;u.mon=bd.name.split(' ').pop();u.last=-9;u.enr=0}
+    if(STG.bosses){var bd=STG.bosses[i],R=BOSS_ROLE[bd.role],pw=STG.pow||1;u.max=u.hp=Math.round(u.max*R.hp*pw);u.atk=Math.round(u.atk*R.atk*pw);u.boss=true;u.brole=bd.role;u.mon=bd.name.split(' ').pop();u.last=-9;u.enr=0}
     else if(STG.isBoss&&i===0){u.max=u.hp=Math.round(u.max*BOSS_HP);u.atk=Math.round(u.atk*BOSS_ATK);u.boss=true}});
   S.combo=-9;
   S.size=Math.max(S.teams.A.length,1);
@@ -567,7 +567,7 @@ function renderPrep(){
     '<div class="row small"><b>出戰的理化獸</b>（點選帶誰上場）</div>'+
     '<div class="roster">'+P.mons.map(function(m){var lv=lvOf(m.xp),on=S.bring.indexOf(m.id)>=0;return '<button class="rchip" data-id="'+m.id+'" aria-pressed="'+on+'"><img src="'+STAND[m.el+stageOf(lv)]+'" alt=""><span><b>'+esc(monName(m.el,lv))+'</b><br><span class="elpill" style="background:'+EL[m.el].color+'">'+EL[m.el].name+'・'+EL[m.el].role+'</span> <span class="num">Lv'+lv+'</span></span></button>'}).join('')+'</div>'+
     '<div class="row">'+(window.BWX?BWX.chip(S.wx):'')+(STG.bosses?'<span class="wxchip" style="--wc:#ff3d7a"><i></i>'+STG.bosses.map(function(b){return esc(b.name.split(' ').pop())+'（'+BOSS_ROLE[b.role].name+'：'+BOSS_ROLE[b.role].desc+'）'}).join('、')+'</span><span class="wxchip" style="--wc:#ff8fd0"><i></i>聯合技「'+esc(STG.combo.name)+'」：'+esc(STG.combo.desc)+'</span>':STG.isBoss?'<span class="wxchip" style="--wc:#ff3d7a"><i></i>Boss 戰：帶頭的 Boss 血量 ×'+BOSS_HP+'、攻擊 ×'+BOSS_ATK+'</span>':'')+
-    (STG.isBoss&&!STG.duel?'<span class="wxchip" style="--wc:#f2c14e"><i></i>'+(STG.bossN>=3?'勝利必得菁英版服裝':STG.bossN===2?'勝利必得金色版服裝（20% 升菁英）':'勝利有 20% 機率得到金色版服裝')+'</span>':'')+'</div>'+
+    (STG.isBoss&&!STG.duel?'<span class="wxchip" style="--wc:#f2c14e"><i></i>'+(STG.bossN>=3?'勝利必得菁英版服裝':STG.bossN===2?'勝利必得金色版服裝（20% 升菁英）':'勝利有 20% 機率得到金色版服裝')+(STG.els?'・掉落'+STG.els.map(function(k){return EL[k].name}).join('、')+'系服裝':'')+'</span>':'')+'</div>'+
     '<div class="tip">拖曳自己的理化獸可以和別的位置交換，點一下換到下一排。<button class="btn sm" id="autoForm" type="button">一鍵排陣</button> 屬性提示：'+tips.join('、')+'</div>'+
     '<div class="small muted">題目出自'+(STG.id==='ALL'?'全部島嶼':STG.mix?STG.mix.map(function(k){return esc(ISLE_NAMES[k])}).join('、'):esc(STG.isle))+'的例題・'+(STG.duel?'勝利':best?'再次勝利':'首次通關')+' 可得 <b style="color:var(--gold-2)">'+rw+'</b> 經驗能量・今天已領 '+tdy+' / '+DAILY_REWARDED+' 場獎勵'+(STG.duel?'':'（首次通關不限）')+'</div>'+
     gearHtml()+'<div class="row">'+(STG.duel?'<a class="btn ghost" href="'+STG.isl+'.html#ret='+STG.isl+(STG.tier+1)+'">回到島上</a>':'<a class="btn ghost" href="P.html#arena">回競技場</a>')+'<span class="small muted rotate">手機轉成橫向，戰場會更大。</span></div>';
@@ -752,7 +752,7 @@ async function finish(w){
   saveP(P);
   var QN=['','普通','金色','菁英'],dropHtml=(newHid?'<div class="gain drop q3"><b style="font-size:20px">發現隱藏服裝「'+esc(HIDDEN[hid].name)+'」</b><span>'+esc(HIDDEN[hid].eff)+'・到換裝屋穿上它</span></div>':'')+
     (drop?(drop.none?'<div class="gain drop q'+drop.q+'"><b style="font-size:20px">'+QN[drop.q]+'寶箱</b><span>你擁有的服裝都已經是'+QN[drop.q]+'版以上，改送 100 經驗能量</span></div>'
-      :'<div class="gain drop q'+drop.q+'"><b style="font-size:20px">獲得'+QN[drop.q]+'版「'+esc(drop.name)+'」</b><span>'+QN[drop.was]+'版升級成'+QN[drop.q]+'版・服裝效果 ×'+(drop.q>2?2:1.5)+'</span></div>'):'');
+      :'<div class="gain drop q'+drop.q+'"><b style="font-size:20px">獲得'+QN[drop.q]+'版'+(drop.el&&EL[drop.el]?EL[drop.el].name+'系':'')+'「'+esc(drop.name)+'」</b><span>'+QN[drop.was]+'版升級成'+QN[drop.q]+'版・服裝效果 ×'+(drop.q>2?2:1.5)+'</span></div>'):'');
   var all=Object.keys(S.units).map(function(k){return S.units[k]}).filter(function(u){return u.side==='A'}).sort(function(a,b){return (b.dmg+b.heal)-(a.dmg+a.heal)});
   var mvp=all[0],pc=function(s){return s.presses?Math.round(s.perfect/s.presses*100)+'%':'–'},next=STG.duel?null:STAGES[STG.i+1];
   var r=document.createElement('div');r.className='result';

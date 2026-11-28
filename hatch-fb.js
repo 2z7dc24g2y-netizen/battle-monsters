@@ -1010,6 +1010,8 @@ var TIERS={J:['god','fire'],K:['god','water'],L:['god','wood'],H:['god','earth']
   B:['el','fire'],F:['el','water'],D:['el','wood'],I:['el','earth'],A:['el','elec'],
   C:['all'],E:['all'],G:['all'],M:['all'],N:['all']};
 var GOD={atk:8,hp:6,def:4},PERK={fire:{crit:15},water:{ult:12},wood:{steal:12},earth:{counter:30},elec:{gauge:1,spd:2}},ELSET={atk:4,hp:3},ALLSET={hp:5,atk:2};
+/* 服裝的屬性：名稱有屬性關鍵字就看名稱，否則看它是哪座島的服裝（神裝島、屬性島）；全屬性島的服裝回傳空字串 */
+function itemEl(name,code){for(var i=0;i<EL_KEY.length;i++)if(EL_KEY[i][1].test(name))return EL_KEY[i][0];var t=TIERS[String(code||'')[0]];return t&&t[1]||''}
 function tierOf(I){var t=TIERS[I];return t?{tier:t[0],el:t[1]||''}:{tier:'all',el:''}}
 function tierName(I){var t=tierOf(I);return t.tier==='god'?ELN[t.el]+'系神裝':t.tier==='el'?ELN[t.el]+'系套裝':'全屬性套裝'}
 function itemBonus(cat,name,code,q){
@@ -1041,7 +1043,7 @@ function total(avatar,items,qm){var sum={},src=[],isl={};if(!avatar||!items)retu
   for(var k in sum){var c=k.indexOf('el_')===0?8:k.indexOf('p_')===0?PCAP[k.split('_')[2]]:CAP[k];if(c!=null&&sum[k]>c)sum[k]=c}
   var tr={god:0,el:1,all:2};sets.sort(function(a,b){return tr[a.tier]-tr[b.tier]||b.n-a.n});
   return{sum:sum,list:src,set:sets[0]||null,sets:sets}}
-window.GEAR={itemBonus:itemBonus,fmt:fmt,short:short,total:total,LABEL:LABEL,need:need,tierOf:tierOf,tierName:tierName,qLoad:qLoad,qOf:qOf,qUp:qUp,QNAME:QNAME,QMULT:QMULT};
+window.GEAR={itemBonus:itemBonus,fmt:fmt,short:short,total:total,LABEL:LABEL,need:need,tierOf:tierOf,tierName:tierName,qLoad:qLoad,qOf:qOf,qUp:qUp,itemEl:itemEl,QNAME:QNAME,QMULT:QMULT};
 })();
 
 window.GEAR_ITEMS={"style":{"names":["短髮","鮑伯頭","包包頭","馬尾","刺蝟頭","爆炸頭"],"lock":[0,0,0,0,0,"Q1"]},"hat":{"names":["不戴","毛線帽","貝雷帽","鴨舌帽","草帽","學士帽","安全帽","運動頭帶","耳罩","護目鏡","竹蜻蜓帽","太陽能帽","廚師帽","嫩芽髮飾","探險頭燈","星球髮飾","耳機","潛水蛙鏡","七彩光環","小吃店帽","小風扇帽","特斯拉線圈帽","夜光睡帽","太陽髮箍","風向標帽","漁夫帽","迷你地球儀帽","考古帽","菊石髮飾","恐龍頭骨帽","冒泡燒瓶帽","太空人頭盔","漏斗帽","鑽石王冠","顯微鏡頭飾","小花頭環","白血球小兵帽","心臟光環","豌豆花頭飾","恐龍帽","菇菇帽","DNA 光環","鳥巢帽","巡守員帽","小樹苗頭飾","綠葉光環","風車頭飾","永續光環","齒輪光環","會考塔帽","金色桂冠","雲朵帽"],"lock":[0,"A1","A2","A4","A8","Aall","E4","E3","E7","Eall","E12","B1","B9","B10","Ball","E18","K2","K6","Kall","Q4","Q7","Qall","I6","I7","I9","I16","Iall","H1","H4","Hall","Jall","Fall","C1","Call","D1","D12","D18","Dall","G6","G11","G16","Gall","L5","L14","L11","Lall","N11","Nall","Mall","Ztop1","Zex80","Iall"]},"top":{"names":["T恤","高領毛衣","連帽外套","實驗白袍","工作圍裙","救生衣","運動外套","閃電T恤","鐵匠圍裙","探險背心","波浪T恤","火山T恤","黃色雨衣","地層T恤","平衡T恤","大氣層T恤"],"lock":[0,"A7","A6","A9","E6","E8","E9","B5","B8","B13","K1","I5","I11","H5","J13","F7"]},"bottom":{"names":["長褲","短褲","裙子","吊帶褲","沙灘短褲","雨靴"],"lock":[0,0,"A5","E5","B7","I14"]},"scarf":{"names":["不戴","圍巾","領結","望遠鏡","溫泉毛巾","彩虹領巾","色環圍巾","四季圍巾","三葉蟲領巾","酸鹼領巾","月相領巾","色層領巾","聽診器","DNA 領巾","綠葉領巾","科學獎章","火焰圍巾"],"lock":[0,"A3","E13","E2","B6","K9","Q3","I8","H10","J9","F10","C3","D7","G7","L1","M1","Zst7"]},"acc":{"names":["無","背包","提袋","背心","工具腰包","氣球","搬運手套","護膝護肘","滑板","法國麵包","手電筒","放大鏡","電池背包","U 型磁鐵","線圈手環","沙灘小鏟子","地質錘","雨傘","化石刷","電子天平","仙女棒","紫水晶","探空氣球","石墨鉛筆","仙人掌護甲"],"lock":[0,0,0,0,"E1","E16","B2","B3","B4","B11","K4","K7","Q2","Q5","Q6","I1","I2","I13","H2","J2","J4","F3","F6","C6","X3"]},"back":{"names":["不背","星空披風","吉他","閃電披風","風箏","衝浪板","恐龍尾巴","泡泡瓶背包","土星環背包","分子模型背包","細胞抱枕背包","三葉蟲背包","青蛙背包","回收背包","蚊子斗篷","雷霆戰甲"],"lock":[0,"E17","K3","Q8","I12","I15","H8","J15","F8","C5","D2","G15","L4","N3","X1","X2"]},"glasses":{"names":["不戴","普通","太陽眼鏡","圓框"],"lock":[0,0,"K5","K8"]}};
